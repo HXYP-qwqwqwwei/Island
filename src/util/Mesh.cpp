@@ -38,9 +38,9 @@ void Mesh::setupTextures(const Shader &shader) const {
     for (const auto& tex : textures) {
         glActiveTexture(GL_TEXTURE0 + i);
         glBindTexture(GL_TEXTURE_2D, tex.id);
-        std::string name("material.");
+        std::string name(Shader::TEXTURES);
         name.reserve(24);
-        name += NameOfType(tex.type);
+        name += Shader::TextureName(tex.type);
         switch (tex.type) {
             case aiTextureType_DIFFUSE:
                 name += std::to_string(nDiff++);

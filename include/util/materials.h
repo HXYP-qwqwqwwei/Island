@@ -13,10 +13,10 @@
 #define SPECULAR    2
 #define SHININESS   3
 
-#define S_AMBIENT     "material.ambient"
-#define S_DIFFUSE     "material.diffuse"
-#define S_SPECULAR    "material.specular"
-#define S_SHININESS   "material.shininess"
+#define S_AMBIENT     "texes.ambient"
+#define S_DIFFUSE     "texes.diffuse"
+#define S_SPECULAR    "texes.specular"
+#define S_SHININESS   "texes.shininess"
 
 
 using Material = std::tuple<glm::vec3, glm::vec3, glm::vec3, float>;

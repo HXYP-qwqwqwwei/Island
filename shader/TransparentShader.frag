@@ -28,31 +28,31 @@ struct DirectLight {
 };
 
 #define N_TEXTURE 4
-struct Material {
-    sampler2D texture_diffuse0;
-    sampler2D texture_specular0;
-    sampler2D texture_normals0;
+struct Textures {
+    sampler2D diffuse0;
+    sampler2D specular0;
+    sampler2D normals0;
     float shininess;
 };
 
 uniform PointLightSrc pointLight;
 uniform SpotLight spotLight;
 uniform DirectLight directLight;
-uniform Material material;
+uniform Textures texes;
 uniform vec3 viewPos;
 
 
 void main() {
-    vec4 texDiff = texture(material.texture_diffuse0, fTexUV);
-    vec4 texSpec = texture(material.texture_specular0, fTexUV);
-    vec4 texNorm = texture(material.texture_normals0, fTexUV);
+    vec4 texDiff = texture(texes.diffuse0, fTexUV);
+    vec4 texSpec = texture(texes.specular0, fTexUV);
+    vec4 texNorm = texture(texes.normals0, fTexUV);
     // ambient
     vec3 ambient = directLight.ambient * texDiff.rgb;
 
     // directional light
     vec3 inj_dLight     = normalize(directLight.injection);
     vec3 diffuse_dLight = directLight.color * texDiff.rgb * max(0.0f, dot(-inj_dLight, fNormal));
-    // TODO sopt light
+
     // point light
     float lightDis      = distance(pointLight.pos, fPos);
     float attemuation   = 1.0 / (1.0 + lightDis * pointLight.linear + lightDis * lightDis * pointLight.quadratic);
@@ -63,7 +63,7 @@ void main() {
     vec3 diffuse = diffuse_dLight + diffuse_pLight;
 
     // specular
-    float shin          = max(7.82e-3, material.shininess);     // 0.00782 * 128 ~= 1
+    float shin          = max(7.82e-3, texes.shininess);     // 0.00782 * 128 ~= 1
     vec3 ref_pLight     = reflect(inj_pLight, fNormal);
     vec3 ref_dLight     = reflect(inj_dLight, fNormal);
     vec3 view           = normalize(viewPos - fPos);

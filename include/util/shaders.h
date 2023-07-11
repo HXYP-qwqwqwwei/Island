@@ -55,7 +55,8 @@ public:
     static constexpr const char MODEL[] = "model";
     static constexpr const char VIEW[] = "view";
     static constexpr const char VIEW_POS[] = "viewPos";
-    static constexpr const char SHININESS[] = "material.shininess";
+    static constexpr const char SHININESS[] = "texes.shininess";
+    static constexpr const char TEXTURES[] = "texes.";
     static constexpr const char PROJECTION[] = "proj";
     static constexpr const char CUBE_SPACE_MATRICES[6][21] = {
             "cubeSpaceMatrices[0]",
@@ -66,6 +67,8 @@ public:
             "cubeSpaceMatrices[5]",
     };
     static constexpr const char Z_FAR[] = "zFar";
+    static const char* TextureName(int type);
+
 
 };
 
@@ -76,7 +79,7 @@ extern Shader* transparentShader;
 extern Shader* cutoutShader;
 extern Shader* screenShader;
 extern Shader* skyShader;
-extern Shader* instancedShader;
+//extern Shader* instancedShader;
 extern Shader* depthShader;
 extern Shader* depthCubeShader;
 

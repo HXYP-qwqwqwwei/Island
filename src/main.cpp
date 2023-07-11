@@ -119,12 +119,12 @@ int main() {
     PointLight pLight {
         glm::vec3(2.0f),
         glm::vec3(-1, 1, 1.5),
-        1, 0.02, 25.0,
+        0.9, 0.02, 25.0,
         pointShadowMap.getDepthCubeMap()
     };
 
     DirectionalLight dLight {
-            glm::vec3(0.6f),
+            glm::vec3(0.5f),
             glm::vec3(-1, -2, -1.5),
             glm::vec3(0.2f),
             directShadowMap.getDepthStencilTex()

@@ -45,12 +45,9 @@ struct Texture2D {
 };
 
 
-const char* NameOfType(int type);
 std::tuple<GLint, GLint> tex_format(int nrChannels);
 GLuint load_texture(const char* path, const std::string& directory, GLint parm = GL_REPEAT, bool flipUV = false, bool sRGB = true);
 GLuint load_cube_map(std::initializer_list<std::string> paths, const std::string& directory, bool flipUV = false);
-// TODO dynamic environment mapping
-GLuint create_cube_map(Shader& shader, const glm::vec3& pos, GLuint fBuffer);
 Texture2D load_texture(const char* path, const std::string& directory, aiTextureType type, GLint parm = GL_REPEAT, bool flipUV = true);
 
 

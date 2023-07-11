@@ -3,8 +3,8 @@
 in vec4 fPos;
 in vec2 fTexUV;
 
-struct Material {
-    sampler2D texture_diffuse0;
+struct Textures {
+    sampler2D diffuse0;
 };
 
 struct PointLight {
@@ -12,12 +12,12 @@ struct PointLight {
     float zFar;
 };
 
-uniform Material material;
+uniform Textures texes;
 uniform PointLight pointLight;
 
 
 void main() {
-    vec4 texDiff = texture(material.texture_diffuse0, fTexUV);
+    vec4 texDiff = texture(texes.diffuse0, fTexUV);
     if (texDiff.a == 0) {
         discard;
     }

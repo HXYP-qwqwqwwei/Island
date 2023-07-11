@@ -3,6 +3,7 @@
 //
 
 #include "util/shaders.h"
+#include "assimp/material.h"
 
 Shader* solidShader;
 Shader* simpleShader;
@@ -10,7 +11,7 @@ Shader* transparentShader;
 Shader* cutoutShader;
 Shader* screenShader;
 Shader* skyShader;
-Shader* instancedShader;
+//Shader* instancedShader;
 Shader* depthShader;
 Shader* depthCubeShader;
 
@@ -24,10 +25,10 @@ void compileShaders() {
     solidShader->link();
 
 
-    instancedShader = new Shader();
-    instancedShader->loadShader("InstancedVert.vert", GL_VERTEX_SHADER);
-    instancedShader->loadShader("SolidShader.frag", GL_FRAGMENT_SHADER);
-    instancedShader->link();
+//    instancedShader = new Shader();
+//    instancedShader->loadShader("InstancedVert.vert", GL_VERTEX_SHADER);
+//    instancedShader->loadShader("SolidShader.frag", GL_FRAGMENT_SHADER);
+//    instancedShader->link();
 
 
     simpleShader = new Shader();
@@ -117,6 +118,23 @@ const Shader* selectCubeShader(RenderType type) {
     }
 
 }
+
+const char* Shader::TextureName(int type) {
+    switch (type) {
+        case aiTextureType_DIFFUSE:
+            return "diffuse";
+        case aiTextureType_SPECULAR:
+            return "specular";
+        case aiTextureType_REFLECTION:
+            return "reflect";
+        case aiTextureType_NORMALS:
+            return "normals";
+        default:
+            std::cerr << "WARN::TEXTURE::Unsupported texture type:" << type << '\n';
+            return "";
+    }
+}
+
 
 
 

@@ -75,22 +75,6 @@ constexpr const std::tuple<glm::vec3, glm::vec3, glm::vec3> FOCAL_VECTORS[6] {
         {glm::vec3(0, 0, 1), glm::vec3(1, 0, 0), glm::vec3(0, 1, 0)},   // ZN
 };
 
-GLuint create_cube_map(Shader& shader, const glm::vec3& pos, GLuint fBuffer) {
-    GLuint id;
-    glGenTextures(1, &id);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, id);
-    const glm::mat4 model = glm::mat4(1);
-    const glm::mat4 proj = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
-    for (uint8_t i = 0; i < 6; ++i) {
-        Camera camera(FOCAL_VECTORS[i]);
-        camera.moveTo(pos);
-        shader.uniformMatrix4fv(Shader::VIEW, camera.getView());
-    }
-    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-    return id;
-}
-
-
 
 Texture2D load_texture(const char* path, const std::string& directory, aiTextureType type, GLint parm, bool flipUV) {
     GLuint id = load_texture(path, directory, parm, flipUV, false);
@@ -99,22 +83,6 @@ Texture2D load_texture(const char* path, const std::string& directory, aiTexture
     };
 }
 
-
-const char* NameOfType(int type) {
-    switch (type) {
-        case aiTextureType_DIFFUSE:
-            return "texture_diffuse";
-        case aiTextureType_SPECULAR:
-            return "texture_specular";
-        case aiTextureType_REFLECTION:
-            return "texture_reflect";
-        case aiTextureType_NORMALS:
-            return "texture_normals";
-        default:
-            std::cerr << "WARN::TEXTURE::Unsupported texture type:" << type << '\n';
-            return "";
-    }
-}
 
 
 std::tuple<GLint, GLint> tex_format(int nrChannels) {

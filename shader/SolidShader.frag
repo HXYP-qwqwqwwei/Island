@@ -32,11 +32,11 @@ struct DirectLight {
 };
 
 #define N_TEXTURE 4
-struct Material {
-    sampler2D texture_diffuse0;
-    sampler2D texture_specular0;
-    sampler2D texture_normals0;
-    sampler2D texture_reflect0;
+struct Textures {
+    sampler2D diffuse0;
+    sampler2D specular0;
+    sampler2D normals0;
+    sampler2D reflect0;
     float shininess;
 };
 
@@ -45,7 +45,7 @@ uniform samplerCube environment;
 uniform PointLight pointLight;
 uniform SpotLight spotLight;
 uniform DirectLight directLight;
-uniform Material material;
+uniform Textures texes;
 uniform vec3 viewPos;
 
 float dLightShadow(vec4 fPosLSpace, vec3 lightInjction);
@@ -53,10 +53,10 @@ float pLightShadow(vec3 fPos);
 
 
 void main() {
-    vec4 texDiff = texture(material.texture_diffuse0, fTexUV);
-    vec4 texSpec = texture(material.texture_specular0, fTexUV);
-    vec4 texNorm = texture(material.texture_normals0, fTexUV);
-    vec4 texRfle = texture(material.texture_reflect0, fTexUV);
+    vec4 texDiff = texture(texes.diffuse0, fTexUV);
+    vec4 texSpec = texture(texes.specular0, fTexUV);
+    vec4 texNorm = texture(texes.normals0, fTexUV);
+    vec4 texRfle = texture(texes.reflect0, fTexUV);
     // ambient
     vec3 ambient = directLight.ambient * texDiff.rgb;
 
@@ -82,7 +82,7 @@ void main() {
     vec3 diffuse = diffuse_dLight + diffuse_pLight;
 
     // specular
-    float shin          = max(7.82e-3, material.shininess);     // 0.00782 * 128 ~= 1
+    float shin          = max(7.82e-3, texes.shininess);     // 0.00782 * 128 ~= 1
     vec3 view           = normalize(viewPos - fPos);
     // Phong
     //    vec3 ref_pLight     = reflect(inj_pLight, fNormal);

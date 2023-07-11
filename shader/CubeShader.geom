@@ -16,7 +16,6 @@ void main() {
         gl_Layer = face;    // gl_Layer指定渲染到立方体贴图的哪个面
         for (int i = 0; i < 3; ++i) {   //  对输入三角形的每个顶点
             fPos = gl_in[i].gl_Position;
-            // FIXME
             fTexUV = g_in[i].gTexUV;
             gl_Position = cubeSpaceMatrices[face] * fPos;
             EmitVertex();
