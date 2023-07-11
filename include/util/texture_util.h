@@ -12,7 +12,7 @@
 #include <string>
 #include <tuple>
 #include "util/stb_image.h"
-#include "util/Shader.h"
+#include "util/shaders.h"
 #include "util/Camera.h"
 #include "assimp/material.h"
 #include "glm/glm.hpp"

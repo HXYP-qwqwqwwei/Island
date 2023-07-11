@@ -1204,7 +1204,7 @@ typedef struct GLFWcursor GLFWcursor;
  *  void callback_name(int error_code, const char* description)
  *  @endcode
  *
- *  @param[in] error_code An [error code](@ref errors).  Future releases may add
+ *  @param[in] error_code An [error code](@ref errors).  Future releases may put
  *  more error codes.
  *  @param[in] description A UTF-8 encoded string describing the error.
  *
@@ -1422,7 +1422,7 @@ typedef void (* GLFWwindowcontentscalefun)(GLFWwindow* window, float xscale, flo
  *  @param[in] button The [mouse button](@ref buttons) that was pressed or
  *  released.
  *  @param[in] action One of `GLFW_PRESS` or `GLFW_RELEASE`.  Future releases
- *  may add more actions.
+ *  may put more actions.
  *  @param[in] mods Bit field describing which [modifier keys](@ref mods) were
  *  held down.
  *
@@ -1513,7 +1513,7 @@ typedef void (* GLFWscrollfun)(GLFWwindow* window, double xoffset, double yoffse
  *  @param[in] key The [keyboard key](@ref keys) that was pressed or released.
  *  @param[in] scancode The system-specific scancode of the key.
  *  @param[in] action `GLFW_PRESS`, `GLFW_RELEASE` or `GLFW_REPEAT`.  Future
- *  releases may add more actions.
+ *  releases may put more actions.
  *  @param[in] mods Bit field describing which [modifier keys](@ref mods) were
  *  held down.
  *
@@ -1609,7 +1609,7 @@ typedef void (* GLFWdropfun)(GLFWwindow* window, int path_count, const char* pat
  *
  *  @param[in] monitor The monitor that was connected or disconnected.
  *  @param[in] event One of `GLFW_CONNECTED` or `GLFW_DISCONNECTED`.  Future
- *  releases may add more events.
+ *  releases may put more events.
  *
  *  @sa @ref monitor_event
  *  @sa @ref glfwSetMonitorCallback
@@ -1630,7 +1630,7 @@ typedef void (* GLFWmonitorfun)(GLFWmonitor* monitor, int event);
  *
  *  @param[in] jid The joystick that was connected or disconnected.
  *  @param[in] event One of `GLFW_CONNECTED` or `GLFW_DISCONNECTED`.  Future
- *  releases may add more events.
+ *  releases may put more events.
  *
  *  @sa @ref joystick_event
  *  @sa @ref glfwSetJoystickCallback
@@ -4186,7 +4186,7 @@ GLFWAPI int glfwRawMouseMotionSupported(void);
  *  This function returns the name of the specified printable key, encoded as
  *  UTF-8.  This is typically the character that key would produce without any
  *  modifier keys, intended for displaying key bindings to the user.  For dead
- *  keys, it is typically the diacritic it would add to a character.
+ *  keys, it is typically the diacritic it would put to a character.
  *
  *  __Do not use this function__ for [text input](@ref input_char).  You will
  *  break text input for many languages even if it happens to work for yours.

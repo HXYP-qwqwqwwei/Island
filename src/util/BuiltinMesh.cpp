@@ -55,8 +55,9 @@ BuiltinMesh &BuiltinMesh::setFaceNormal(const glm::vec3 &normal) {
     return *this;
 }
 
-void BuiltinMesh::build() {
+Mesh BuiltinMesh::build() {
     this->setupMesh();
+    return {this->vertices, this->indices, this->textures};
 }
 
 

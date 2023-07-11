@@ -7,7 +7,7 @@
 #include <vector>
 #include "defs.h"
 #include "util/texture_util.h"
-#include "util/Shader.h"
+#include "util/shaders.h"
 #include "Mesh.h"
 
 class Screen: public AbstractMesh<Vertex2D, uint>{

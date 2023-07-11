@@ -163,8 +163,8 @@ struct ASSIMP_API aiNode {
     aiNode* FindNode(const char* name);
 
     /**
-     * @brief   Will add new children.
-     * @param   numChildren  Number of children to add.
+     * @brief   Will put new children.
+     * @param   numChildren  Number of children to put.
      * @param   children     The array with pointers showing to the children.
      */
     void addChildren(unsigned int numChildren, aiNode **children);

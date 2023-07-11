@@ -23,7 +23,12 @@ mat4 Camera::getView() {
 }
 
 void Camera::update() {
-    this->right = glm::normalize(glm::cross(VERTICAL_UP, this->focal));
+    if (this->focal.x == 0 && this->focal.z == 0) {
+        this->focal.y = (this->focal.y >= 0) ? 1.0 : -1.0;
+        this->right = glm::vec3(1.0, 0.0, 0.0);
+    } else {
+        this->right = glm::normalize(glm::cross(VERTICAL_UP, this->focal));
+    }
     this->up = glm::cross(this->focal, right);
 }
 

@@ -30,7 +30,7 @@ void main() {
 //    float avg = (0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b);
 //    fragColor = vec4(avg, avg, avg, 1);
     // 2D-Convolution
-    float shapen[9] = {
+    float sharpen[9] = {
             -1, -1, -1,
             -1,  9, -1,
             -1, -1, -1
@@ -48,11 +48,13 @@ void main() {
             1, 1, 1
     };
 
-//    fragColor = vec4(convolution(texture0, fTexUV, shapen), 1);
+//    color = convolution(texture0, fTexUV, edge);
+//    fragColor = vec4(color, 1);
 
     // Gamma-correction
     float gamma = 2.2;
     fragColor = vec4(pow(color, vec3(1/gamma)), 1);
+
 }
 
 vec3 convolution(sampler2D tex, vec2 uv, float kernel[9]) {

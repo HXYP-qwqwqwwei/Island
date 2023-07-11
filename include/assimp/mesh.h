@@ -458,7 +458,7 @@ struct aiAnimMesh {
     /** Replacement for aiMesh::mVertices. If this array is non-nullptr,
      *  it *must* contain mNumVertices entries. The corresponding
      *  array in the host mesh must be non-nullptr as well - animation
-     *  meshes may neither add or nor remove vertex components (if
+     *  meshes may neither put or nor remove vertex components (if
      *  a replacement array is nullptr and the corresponding source
      *  array is not, the source data is taken instead)*/
     C_STRUCT aiVector3D *mVertices;

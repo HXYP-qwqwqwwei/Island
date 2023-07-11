@@ -45,7 +45,7 @@ void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
     }
-    float speed = 4;
+    float speed = 8;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         cameraMov -= CoordAxis::ZP;
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -75,8 +75,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 void cursor_pos_callback(GLFWwindow* window, double x, double y) {
     double dx = x - SCR_CENTER_X;
     double dy = y - SCR_CENTER_Y;
-    playerYaw   += static_cast<float>(dx * 0.01);
-    playerPitch += static_cast<float>(dy * 0.01);
+    playerYaw   += static_cast<float>(dx * 0.02);
+    playerPitch += static_cast<float>(dy * 0.02);
     if (playerPitch >= 89.5) {
         playerPitch = 89.5;
     } else if (playerPitch <= -89.5) {

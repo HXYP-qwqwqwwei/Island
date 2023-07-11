@@ -13,10 +13,28 @@ Mesh::Mesh(const std::vector<Vertex3D> &vertices, const std::vector<uint> &indic
 Mesh::Mesh() = default;
 
 void Mesh::draw(const Shader &shader) const {
+    this->setupTextures(shader);
+    this->bind();
+    glDrawElements(GL_TRIANGLES, static_cast<int>(this->indices.size()), GL_UNSIGNED_INT, nullptr);
+    this->unbind();
+}
+
+
+void Mesh::drawInstanced(const Shader &shader, int amount) const {
+    this->setupTextures(shader);
+    this->bind();
+    glDrawElementsInstanced(GL_TRIANGLES, static_cast<int>(this->indices.size()), GL_UNSIGNED_INT, nullptr, amount);
+    this->unbind();
+}
+
+
+void Mesh::setupTextures(const Shader &shader) const {
     int nDiff = 0;
     int nSpec = 0;
     int nNorm = 0;
-    int i = 0;
+    int nRefl = 0;
+    int i = 2;
+    shader.use();
     for (const auto& tex : textures) {
         glActiveTexture(GL_TEXTURE0 + i);
         glBindTexture(GL_TEXTURE_2D, tex.id);
@@ -32,22 +50,19 @@ void Mesh::draw(const Shader &shader) const {
                 break;
             case aiTextureType_NORMALS:
                 name += std::to_string(nNorm++);
+                break;
+            case aiTextureType_REFLECTION:
+                name += std::to_string(nRefl++);
             default:
                 break;
         }
-        shader.use();
         shader.uniformInt(name, i);
         i += 1;
     }
-    glActiveTexture(GL_TEXTURE0 + i);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, this->envMap);
-    shader.uniformInt("environment", i);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindVertexArray(this->VAO);
-    glDrawElements(GL_TRIANGLES, static_cast<int>(this->indices.size()), GL_UNSIGNED_INT, nullptr);
-    glBindVertexArray(0);
 }
+
 
 void Mesh::setupVertexAttribs() {
     glEnableVertexAttribArray(0);

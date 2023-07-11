@@ -54,7 +54,7 @@ GLuint load_cube_map(std::initializer_list<std::string> paths, const std::string
         }
         glTexImage2D(
                 GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-                0, get<SRGB>(format), width, height, 0, get<RGB>(format), GL_UNSIGNED_BYTE, data
+                0, get<RGB>(format), width, height, 0, get<RGB>(format), GL_UNSIGNED_BYTE, data
         );
         stbi_image_free(data);
     }
@@ -84,7 +84,7 @@ GLuint create_cube_map(Shader& shader, const glm::vec3& pos, GLuint fBuffer) {
     for (uint8_t i = 0; i < 6; ++i) {
         Camera camera(FOCAL_VECTORS[i]);
         camera.moveTo(pos);
-        shader.uniformMatrix4fv(shader::VIEW, camera.getView());
+        shader.uniformMatrix4fv(Shader::VIEW, camera.getView());
     }
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
     return id;
@@ -106,6 +106,8 @@ const char* NameOfType(int type) {
             return "texture_diffuse";
         case aiTextureType_SPECULAR:
             return "texture_specular";
+        case aiTextureType_REFLECTION:
+            return "texture_reflect";
         case aiTextureType_NORMALS:
             return "texture_normals";
         default:

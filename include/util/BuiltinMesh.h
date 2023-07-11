@@ -16,7 +16,7 @@ public:
     BuiltinMesh& setFaceNormal(float x, float y, float z);
     BuiltinMesh& setFaceNormal(const glm::vec3& normal);
     BuiltinMesh& nextFace();
-    void build();
+    Mesh build();
 
 protected:
     size_t faceHeader = 0;

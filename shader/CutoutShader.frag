@@ -58,7 +58,7 @@ void main() {
     // TODO sopt light
     // point light
     float lightDis      = distance(pointLight.pos, fPos);
-    float attemuation   = 1.0 / (1.0 + lightDis * pointLight.linear + lightDis * lightDis * pointLight.quadratic);
+    float attemuation   = 1.0 / lightDis;
     vec3 plightResult   = pointLight.color * attemuation;
     vec3 inj_pLight     = normalize(fPos - pointLight.pos);
     vec3 diffuse_pLight = plightResult * texDiff.rgb * max(0.0f, dot(-inj_pLight, fNormal));

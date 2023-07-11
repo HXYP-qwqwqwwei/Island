@@ -873,7 +873,7 @@ enum aiComponent
     "IMPORT_MD3_SKIN_NAME"
 
 // ---------------------------------------------------------------------------
-/** @brief  Specify if to try load Quake 3 shader files. This also controls
+/** @brief  Specify if to try load Quake 3 Shader files. This also controls
  *  original surface name handling: when disabled it will be used unchanged.
  *
  * Property type: bool. Default value: true.
@@ -882,17 +882,17 @@ enum aiComponent
     "IMPORT_MD3_LOAD_SHADERS"
 
 // ---------------------------------------------------------------------------
-/** @brief  Specify the Quake 3 shader file to be used for a particular
+/** @brief  Specify the Quake 3 Shader file to be used for a particular
  *  MD3 file. This can also be a search path.
  *
  * By default Assimp's behaviour is as follows: If a MD3 file
  * <tt>any_path/models/any_q3_subdir/model_name/file_name.md3</tt> is
- * loaded, the library tries to locate the corresponding shader file in
- * <tt>any_path/scripts/model_name.shader</tt>. This property overrides this
- * behaviour. It can either specify a full path to the shader to be loaded
+ * loaded, the library tries to locate the corresponding Shader file in
+ * <tt>any_path/scripts/model_name.Shader</tt>. This property overrides this
+ * behaviour. It can either specify a full path to the Shader to be loaded
  * or alternatively the path (relative or absolute) to the directory where
  * the shaders for all MD3s to be loaded reside. Assimp attempts to open
- * <tt>IMPORT_MD3_SHADER_SRC/model_name.shader</tt> first, <tt>IMPORT_MD3_SHADER_SRC/file_name.shader</tt>
+ * <tt>IMPORT_MD3_SHADER_SRC/model_name.Shader</tt> first, <tt>IMPORT_MD3_SHADER_SRC/file_name.Shader</tt>
  * is the fallback file. Note that IMPORT_MD3_SHADER_SRC should have a terminal (back)slash.
  * Property type: String. Default value: n/a.
  */
@@ -967,7 +967,7 @@ enum aiComponent
  * order: <material-name>.material, <mesh-filename-base>.material and
  * lastly the material name defined by this config property.
  * <br>
- * Property type: String. Default value: Scene.material.
+ * Property type: String. Default value: ModelManager.material.
  */
 #define AI_CONFIG_IMPORT_OGRE_MATERIAL_FILE \
     "IMPORT_OGRE_MATERIAL_FILE"
@@ -976,7 +976,7 @@ enum aiComponent
 /** @brief Ogre Importer detect the texture usage from its filename.
  *
  * Ogre material texture units do not define texture type, the textures usage
- * depends on the used shader or Ogre's fixed pipeline. If this config property
+ * depends on the used Shader or Ogre's fixed pipeline. If this config property
  * is true Assimp will try to detect the type from the textures filename postfix:
  * _n, _nrm, _nrml, _normal, _normals and _normalmap for normal map, _s, _spec,
  * _specular and _specularmap for specular map, _l, _light, _lightmap, _occ
@@ -1069,7 +1069,7 @@ enum aiComponent
 /** @brief Specifies whether the Collada loader should use Collada names.
  *
  * If this property is set to true, the Collada names will be used as the node and
- * mesh names. The default is to use the fbo tag (resp. sid tag, if no fbo tag is present)
+ * mesh names. The default is to use the id tag (resp. sid tag, if no id tag is present)
  * instead.
  * Property type: Bool. Default value: false.
  */

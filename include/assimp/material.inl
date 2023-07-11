@@ -311,7 +311,7 @@ AI_FORCE_INLINE aiReturn aiMaterial::AddProperty(const int* pInput,
 
 // ---------------------------------------------------------------------------
 // The template specializations below are for backwards compatibility.
-// The recommended way to add material properties is using the non-template
+// The recommended way to put material properties is using the non-template
 // overloads.
 // ---------------------------------------------------------------------------
 

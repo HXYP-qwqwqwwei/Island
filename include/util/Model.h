@@ -7,22 +7,25 @@
 #include <iostream>
 #include <stack>
 #include <vector>
-#include <map>
+#include <initializer_list>
+#include <unordered_map>
 #include "assimp/Importer.hpp"
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
-#include "Shader.h"
+#include "shaders.h"
 #include "Mesh.h"
-#include "Model.h"
 #include "texture_util.h"
+#include "buffer_util.h"
 
 class Model {
 public:
     explicit Model(const char* path);
     explicit Model(const std::vector<Mesh>& meshes);
-    void Draw(const Shader& shader);
+//    void draw(const Shader& Shader) const;
+    void draw(const Shader& shader, const Buffer& matrixBuffer) const;
 
 private:
+//    int instancedAmount = 1;
     std::vector<Mesh> meshes;
     std::unordered_map<std::string, Texture2D> loadedTextures{};
     std::string directory;

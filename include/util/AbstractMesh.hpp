@@ -6,11 +6,12 @@
 #define ISLAND_ABSTRACT_MESH_HPP
 #include <string>
 #include <vector>
+#include <initializer_list>
 #include "defs.h"
 #include "glad/glad.h"
 #include "glm/glm.hpp"
 #include "assimp/material.h"
-#include "util/Shader.h"
+#include "util/shaders.h"
 #include "util/stb_image.h"
 #include "util/texture_util.h"
 
@@ -21,15 +22,20 @@ public:
     AbstractMesh(const std::vector<Vert>& vertices, const std::vector<uint>& indices, const std::vector<Tex>& textures);
     [[nodiscard]] Long getBufferSize() const;
     [[nodiscard]] Long getIndicesSize() const;
-    AbstractMesh& addTexture(const Tex& texture);
+//    AbstractMesh& addTexture(const Tex& texture);
+    AbstractMesh& setTextures(const std::initializer_list<Tex>& textures);
     virtual void draw(const Shader& shader) const = 0;
-    void setEnvironmentMap(GLuint cubeTex);
+//    void setEnvironmentMap(GLuint cubeTex);
+//    void setShadowMap(GLuint shadowTex);
+    void bind() const;
+    void unbind() const;
 
 protected:
     GLuint VAO = 0;
     GLuint VBO = 0;
     GLuint EBO = 0;
-    GLuint envMap = 0;
+//    GLuint envMap = 0;
+//    GLuint shadowMap = 0;
     std::vector<Vert> vertices;
     std::vector<Tex> textures;
     std::vector<uint> indices;
@@ -55,9 +61,15 @@ Long AbstractMesh<Vert, Tex>::getIndicesSize() const {
     return static_cast<Long>(this->indices.size() * sizeof(uint));
 }
 
+//template<class Vert, class Tex>
+//AbstractMesh<Vert, Tex> &AbstractMesh<Vert, Tex>::addTexture(const Tex &texture) {
+//    this->textures.push_back(texture);
+//    return *this;
+//}
+
 template<class Vert, class Tex>
-AbstractMesh<Vert, Tex> &AbstractMesh<Vert, Tex>::addTexture(const Tex &texture) {
-    this->textures.push_back(texture);
+AbstractMesh<Vert, Tex>& AbstractMesh<Vert, Tex>::setTextures(const std::initializer_list<Tex>& _textures) {
+    this->textures = _textures;
     return *this;
 }
 
@@ -80,9 +92,15 @@ void AbstractMesh<Vert, Tex>::setupMesh() {
 
 }
 
+
 template<class Vert, class Tex>
-void AbstractMesh<Vert, Tex>::setEnvironmentMap(GLuint cubeTex) {
-    this->envMap = cubeTex;
+void AbstractMesh<Vert, Tex>::bind() const {
+    glBindVertexArray(this->VAO);
+}
+
+template<class Vert, class Tex>
+void AbstractMesh<Vert, Tex>::unbind() const {
+    glBindVertexArray(0);
 }
 
 #endif //ISLAND_ABSTRACT_MESH_HPP

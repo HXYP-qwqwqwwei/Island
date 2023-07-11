@@ -7,7 +7,7 @@
 #include <tuple>
 #include "glm/gtc/matrix_transform.hpp"
 #include "game_util.h"
-#include "Shader.h"
+#include "shaders.h"
 
 
 class Camera {
@@ -22,14 +22,14 @@ private:
     void update();
 
 public:
-    Camera(const glm::vec3& pos = glm::vec3(0, 0, 0), const glm::vec3& focal = glm::vec3(0, 0, 1));
-    Camera(const std::tuple<glm::vec3, glm::vec3, glm::vec3>& info);
+    explicit Camera(const glm::vec3& pos = glm::vec3(0, 0, 0), const glm::vec3& focal = glm::vec3(0, 0, 1));
+    explicit Camera(const std::tuple<glm::vec3, glm::vec3, glm::vec3>& info);
     void move(const glm::vec3& mov);
     void moveTo(const glm::vec3& pos);
     void eulerAngle(float pitch, float yaw, float roll = 0);
     glm::mat4 getView();
-    const glm::vec3& getPos() const;
-    const glm::vec3& getFocal() const;
+    [[nodiscard]] const glm::vec3& getPos() const;
+    [[nodiscard]] const glm::vec3& getFocal() const;
 };
 
 

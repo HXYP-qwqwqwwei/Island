@@ -10,19 +10,23 @@
 #include "glad/glad.h"
 #include "glm/glm.hpp"
 #include "assimp/material.h"
-#include "Shader.h"
+#include "shaders.h"
 #include "stb_image.h"
 #include "texture_util.h"
 #include "AbstractMesh.hpp"
 
 class Mesh: public AbstractMesh<Vertex3D, Texture2D>{
+    friend class Model;
 public:
     Mesh(const std::vector<Vertex3D>& vertices, const std::vector<uint>& indices, const std::vector<Texture2D>& textures);
     Mesh();
     void draw(const Shader& shader) const override;
 
 protected:
+    void drawInstanced(const Shader& shader, int amount) const;
     void setupVertexAttribs() override;
+
+    void setupTextures(const Shader &shader) const;
 };
 
 

@@ -6,7 +6,7 @@
 #define ISLAND_MATERIALS_H
 #include <tuple>
 #include "glm/glm.hpp"
-#include "Shader.h"
+#include "shaders.h"
 
 #define AMBIENT     0
 #define DIFFUSE     1

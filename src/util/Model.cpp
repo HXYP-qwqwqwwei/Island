@@ -2,7 +2,6 @@
 // Created by HXYP on 2023/4/9.
 //
 #include "util/Model.h"
-#include "util/texture_util.h"
 
 Model::Model(const char *path) {
     this->loadModel(path);
@@ -14,11 +13,42 @@ Model::Model(const std::vector<Mesh> &meshes) {
 }
 
 
-void Model::Draw(const Shader &shader) {
+//void Model::draw(const Shader &Shader) const {
+//    for (const auto& mesh : this->meshes) {
+//        mesh.draw(Shader);
+//    }
+//}
+
+void Model::draw(const Shader &shader, const Buffer& matrixBuffer) const {
+    matrixBuffer.bind();
+    int instancedAmount = static_cast<int>(matrixBuffer.getSize() / sizeof(glm::mat4));
+    for (const Mesh& mesh : this->meshes) {
+        mesh.bind();
+
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, SZ_MAT4F, (void*)nullptr);
+
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, SZ_MAT4F, (void*)(SZ_VEC4F));
+
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, SZ_MAT4F, (void*)(2*SZ_VEC4F));
+
+        glEnableVertexAttribArray(6);
+        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, SZ_MAT4F, (void*)(3*SZ_VEC4F));
+
+        glVertexAttribDivisor(3, 1);
+        glVertexAttribDivisor(4, 1);
+        glVertexAttribDivisor(5, 1);
+        glVertexAttribDivisor(6, 1);
+
+        mesh.unbind();
+    }
     for (const auto& mesh : this->meshes) {
-        mesh.draw(shader);
+        mesh.drawInstanced(shader, instancedAmount);
     }
 }
+
 
 void Model::loadModel(const std::string &path) {
     Assimp::Importer importer;
