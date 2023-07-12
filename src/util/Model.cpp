@@ -105,8 +105,8 @@ void Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
         }
         vertices.push_back({
             {pos.x, pos.y, pos.z},
-            {norm.x, norm.y, norm.z},
-            {u, v}
+            {u, v},
+            {norm.x, norm.y, norm.z}
         });
     }
     // Indices

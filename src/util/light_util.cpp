@@ -5,8 +5,8 @@
 #include "util/light_util.h"
 
 void setupPointLight(const Shader* shader, const PointLight& light) {
+    shader->uniformVec3("pointLightPosition", light.pos);
     shader->uniformVec3("pointLight.color", light.color);
-    shader->uniformVec3("pointLight.pos", light.pos);
     shader->uniformFloat("pointLight.linear", light.linear);
     shader->uniformFloat("pointLight.zFar", light.zFar);
 
@@ -16,8 +16,8 @@ void setupPointLight(const Shader* shader, const PointLight& light) {
 }
 
 void setupDirectionalLight(const Shader* shader, const DirectionalLight& light) {
+    shader->uniformVec3("directLightInjection", light.injection);
     shader->uniformVec3("directLight.color", light.color);
-    shader->uniformVec3("directLight.injection", light.injection);
     shader->uniformVec3("directLight.ambient", light.ambient);
 
     glActiveTexture(GL_TEXTURE30);

@@ -53,13 +53,16 @@ int main() {
     Texture2D cubeDiff = load_texture("container2.png", dir, aiTextureType_DIFFUSE);
     Texture2D cubeSpec = load_texture("container2_specular.png", dir, aiTextureType_SPECULAR);
     Texture2D cubeRefl = load_texture("container2_specular.png", dir, aiTextureType_REFLECTION);
+    Texture2D cubeNorm = load_texture("container2_normals.png", dir, aiTextureType_NORMALS);
 
     Texture2D floorDiff = load_texture("plank_flooring_diff_1k.jpg", dir, aiTextureType_DIFFUSE);
     Texture2D floorSpec = load_texture("plank_flooring_rough_1k.jpg", dir, aiTextureType_SPECULAR);
-//    Texture2D floorNorm = load_texture("plank_flooring_nor_gl_1k.jpg", dir, aiTextureType_NORMALS);
+    Texture2D floorNorm = load_texture("plank_flooring_nor_gl_1k.jpg", dir, aiTextureType_NORMALS);
     Texture2D grassDiff = load_texture("grass.png", dir, aiTextureType_DIFFUSE, GL_CLAMP_TO_EDGE);
     Texture2D emptySpec = load_texture("pure_black.png", dir, aiTextureType_SPECULAR);
     Texture2D windowTexDiff = load_texture("window_transparent.png", dir, aiTextureType_DIFFUSE);
+
+    Texture2D flatNorm = load_texture("flat.png", dir, aiTextureType_NORMALS);
 
     GLuint skyBoxTex = load_cube_map(
             {"skybox/right.jpg", "skybox/left.jpg", "skybox/top.jpg", "skybox/bottom.jpg", "skybox/front.jpg", "skybox/back.jpg"},
@@ -77,11 +80,11 @@ int main() {
     Model nanoSuitModel("resources/nanosuit/nanosuit.obj");
     ModelManager modelManager;
     {
-        auto cube           = [=]() -> Model {return shapes::Cube(1, {cubeDiff, cubeSpec});};
+        auto cube           = [=]() -> Model {return shapes::Cube(1, {cubeDiff, cubeSpec, cubeNorm});};
         auto lightCube      = [=]() -> Model {return shapes::Cube(0.2f);};
-        auto woodenFloor    = [=]() -> Model {return shapes::Rectangle(16, 16, {floorDiff, floorSpec});};
+        auto woodenFloor    = [=]() -> Model {return shapes::Rectangle(16, 16, {floorDiff, floorSpec, floorNorm});};
         auto rgbWindow      = [=]() -> Model {return shapes::Rectangle(1, 1, {windowTexDiff, emptySpec});};
-        auto grass          = [=]() -> Model {return shapes::Rectangle(1, 1, {grassDiff, emptySpec});};
+        auto grass          = [=]() -> Model {return shapes::Rectangle(1, 1, {grassDiff, emptySpec, flatNorm});};
 
         modelManager.put(cube, "cube");
         modelManager.put(woodenFloor, "wooden_floor");
@@ -117,10 +120,10 @@ int main() {
 
 //    glm::vec3 pLight(1, 1, 1);
     PointLight pLight {
-        glm::vec3(2.0f),
-        glm::vec3(-1, 1, 1.5),
-        0.9, 0.02, 25.0,
-        pointShadowMap.getDepthCubeMap()
+            glm::vec3(1.0f),
+            glm::vec3(-1, 1, 1.5),
+            0.0, 0.02, 25.0,
+            pointShadowMap.getDepthCubeMap()
     };
 
     DirectionalLight dLight {
@@ -148,6 +151,9 @@ int main() {
         double t1 = glfwGetTime();
         gameSPF = static_cast<float>(t1 - t0);
         t0 = t1;
+
+        pLight.pos = glm::vec3(3*cos(t1) - 1, 1, 3*sin(t1) - 1);
+
         glm::mat4 modelMtx(1.0f);
         // camera
         camera.move(cameraMov);
@@ -218,7 +224,7 @@ int main() {
 
         frameBuffer.bind();
 
-        // 每当glClear被调用，color buffer中的颜色都会被替换成glClearColor中配置的颜色
+        // 每当glClear被调用，color buffer都将被填充为glClearColor中配置的颜色
         glClearColor(0.1, 0.1, 0.1, 1.0F);
         // Depth test
 //        glDepthMask(GL_FALSE);  // Read-Only

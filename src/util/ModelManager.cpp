@@ -14,7 +14,12 @@ void ModelManager::put(const std::function<Model()> &creator, const std::string 
 }
 
 const Model* ModelManager::getModel(const std::string &name) {
-    return &this->models[names[name]];
+    auto it = names.find(name);
+    if (it != names.end()) {
+        return &this->models[it->second];
+    }
+    std::cout << "ERROR::ModelManager::Model \"" << name << "\" not found";
+    return &this->models[0];
 }
 
 const Model *ModelManager::operator[](size_t i) {

@@ -7,36 +7,35 @@
 Model shapes::Cube(float len, TexList<Texture2D> textures) {
     BuiltinMesh cube;
     float offset = len/2;
-    cube.addVertex(offset, offset, offset).setUV(1.0f, 1.0f)
-            .addVertex( -offset,  offset,   offset).setUV(0.0f, 1.0f)
-            .addVertex(-offset,  -offset,   offset).setUV(0.0f, 0.0f)
-            .addVertex(offset,   -offset,   offset).setUV(1.0f, 0.0f)
-            .setFaceNormal(0, 0, 1).nextFace()
-            .addVertex(-offset,   offset,  -offset).setUV(1.0f, 1.0f)
-            .addVertex(offset,  offset,  -offset).setUV(0.0f, 1.0f)
-            .addVertex( offset,  -offset,  -offset).setUV(0.0f, 0.0f)
-            .addVertex( -offset,   -offset,  -offset).setUV(1.0f, 0.0f)
-            .setFaceNormal(0, 0, -1).nextFace()
-            .addVertex( offset,   offset,  -offset).setUV(1.0f, 1.0f)
-            .addVertex( -offset,   offset,   -offset).setUV(0.0f, 1.0f)
-            .addVertex(-offset,   offset,   offset).setUV(0.0f, 0.0f)
-            .addVertex(offset,   offset,  offset).setUV(1.0f, 0.0f)
-            .setFaceNormal(0, 1, 0).nextFace()
-            .addVertex(-offset,  -offset,  -offset).setUV(1.0f, 1.0f)
-            .addVertex(offset,  -offset,   -offset).setUV(0.0f, 1.0f)
-            .addVertex( offset,  -offset,   offset).setUV(0.0f, 0.0f)
-            .addVertex( -offset,  -offset,  offset).setUV(1.0f, 0.0f)
-            .setFaceNormal(0, -1, 0).nextFace()
-            .addVertex( offset,   offset,  -offset).setUV(1.0f, 1.0f)
-            .addVertex( offset,  offset,  offset).setUV(0.0f, 1.0f)
-            .addVertex( offset,  -offset,   offset).setUV(0.0f, 0.0f)
-            .addVertex( offset,   -offset,   -offset).setUV(1.0f, 0.0f)
-            .setFaceNormal(1, 0, 0).nextFace()
-            .addVertex(-offset,   offset,   offset).setUV(1.0f, 1.0f)
-            .addVertex(-offset,  offset,   -offset).setUV(0.0f, 1.0f)
-            .addVertex(-offset,  -offset,  -offset).setUV(0.0f, 0.0f)
-            .addVertex(-offset,   -offset,  offset).setUV(1.0f, 0.0f)
-            .setFaceNormal(-1, 0, 0);
+    cube.addVertex(offset, offset, offset, 1.0f, 1.0f)
+            .addVertex( -offset,  offset,   offset, 0.0f, 1.0f)
+            .addVertex(-offset,  -offset,   offset, 0.0f, 0.0f)
+            .addVertex(offset,   -offset,   offset, 1.0f, 0.0f)
+            .nextFace()
+            .addVertex(-offset,   offset,  -offset, 1.0f, 1.0f)
+            .addVertex(offset,  offset,  -offset, 0.0f, 1.0f)
+            .addVertex( offset,  -offset,  -offset, 0.0f, 0.0f)
+            .addVertex( -offset,   -offset,  -offset, 1.0f, 0.0f)
+            .nextFace()
+            .addVertex( offset,   offset,  -offset, 1.0f, 1.0f)
+            .addVertex( -offset,   offset,   -offset, 0.0f, 1.0f)
+            .addVertex(-offset,   offset,   offset, 0.0f, 0.0f)
+            .addVertex(offset,   offset,  offset, 1.0f, 0.0f)
+            .nextFace()
+            .addVertex(-offset,  -offset,  -offset, 1.0f, 1.0f)
+            .addVertex(offset,  -offset,   -offset, 0.0f, 1.0f)
+            .addVertex( offset,  -offset,   offset, 0.0f, 0.0f)
+            .addVertex( -offset,  -offset,  offset, 1.0f, 0.0f)
+            .nextFace()
+            .addVertex( offset,   offset,  -offset, 1.0f, 1.0f)
+            .addVertex( offset,  offset,  offset, 0.0f, 1.0f)
+            .addVertex( offset,  -offset,   offset, 0.0f, 0.0f)
+            .addVertex( offset,   -offset,   -offset, 1.0f, 0.0f)
+            .nextFace()
+            .addVertex(-offset,   offset,   offset, 1.0f, 1.0f)
+            .addVertex(-offset,  offset,   -offset, 0.0f, 1.0f)
+            .addVertex(-offset,  -offset,  -offset, 0.0f, 0.0f)
+            .addVertex(-offset,   -offset,  offset, 1.0f, 0.0f);
     cube.setTextures(textures);
     return Model({cube.build()});
 }
@@ -45,11 +44,10 @@ Model shapes::Rectangle(float w, float h, TexList<Texture2D> textures, float max
     BuiltinMesh rect;
     float w_offset = w/2;
     float h_offset = h/2;
-    rect.addVertex(    w_offset,    h_offset,   0).setUV(maxU, maxV)
-            .addVertex(-w_offset,    h_offset,   0).setUV(0,    maxV)
-            .addVertex(-w_offset,   -h_offset,   0).setUV(0,    0)
-            .addVertex( w_offset,   -h_offset,   0).setUV(maxU, 0)
-            .setFaceNormal(0, 0, 1);
+    rect.addVertex(    w_offset,    h_offset,   0, maxU, maxV)
+            .addVertex(-w_offset,    h_offset,   0, 0,    maxV)
+            .addVertex(-w_offset,   -h_offset,   0, 0,    0)
+            .addVertex( w_offset,   -h_offset,   0, maxU, 0);
     rect.setTextures(textures);
     return Model({rect.build()});
 }

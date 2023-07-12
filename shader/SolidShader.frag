@@ -4,28 +4,21 @@ in vec3 fPos;
 in vec4 fPosLightSpace;
 in vec3 fNormal;
 in vec2 fTexUV;
+in vec3 pLightPos_tanSpace;
+in vec3 dLightInj_tanSpace;
+in vec3 fragPos_tanSpace;
+in vec3 viewPos_tanSpace;
 
 out vec4 fragColor;
 
-struct SpotLight {
-    vec3 color;
-    vec3 pos;
-    vec3 direction;
-    float linear;
-    float zFar;
-    float cutOff;
-};
-
 struct PointLight {
     vec3 color;
-    vec3 pos;
     float linear;
     float zFar;
     samplerCube shadowMap;
 };
 
 struct DirectLight {
-    vec3 injection;
     vec3 color;
     vec3 ambient;
     sampler2D shadowMap;
@@ -41,68 +34,62 @@ struct Textures {
 };
 
 uniform samplerCube environment;
-//uniform samplerCube shadowMap;
 uniform PointLight pointLight;
-uniform SpotLight spotLight;
 uniform DirectLight directLight;
 uniform Textures texes;
-uniform vec3 viewPos;
+uniform vec3 directLightInjection;
+uniform vec3 pointLightPosition;
+//uniform vec3 viewPos;
+
 
 float dLightShadow(vec4 fPosLSpace, vec3 lightInjction);
-float pLightShadow(vec3 fPos);
+float pLightShadow(vec3 fPos, vec3 lightPos);
 
 
 void main() {
-    vec4 texDiff = texture(texes.diffuse0, fTexUV);
+    vec4 texDiff = texture(texes.diffuse0,  fTexUV);
     vec4 texSpec = texture(texes.specular0, fTexUV);
-    vec4 texNorm = texture(texes.normals0, fTexUV);
-    vec4 texRfle = texture(texes.reflect0, fTexUV);
+    vec4 texRfle = texture(texes.reflect0,  fTexUV);
+    vec3 texNorm = texture(texes.normals0,  fTexUV).rgb;
+    texNorm = texNorm * 2 - 1;  // IMPORTANT!!!
+
     // ambient
     vec3 ambient = directLight.ambient * texDiff.rgb;
 
     // directional light
-    vec3 inj_dLight     = normalize(directLight.injection);
-    vec3 diffuse_dLight = directLight.color * texDiff.rgb * max(0.0f, dot(-inj_dLight, fNormal));
-    float dShadow = dLightShadow(fPosLightSpace, inj_dLight);
-    diffuse_dLight *= (1 - dShadow);
+    vec3 diffuse_dLight = directLight.color * texDiff.rgb * max(0.0f, dot(-dLightInj_tanSpace, texNorm));
+    float dShadow       = dLightShadow(fPosLightSpace, directLightInjection);
+    diffuse_dLight     *= (1 - dShadow);
 
-    // TODO sopt light
 
     // point light
-    float lightDis      = distance(pointLight.pos, fPos);
-    float attenuation = 1.0 / (lightDis * pointLight.linear);   // at linear space
+    vec3 inj_pLight     = fragPos_tanSpace - pLightPos_tanSpace;
+    float lightDis      = length(inj_pLight);
+    float attenuation   = 1.0 / (1.0 + lightDis * pointLight.linear);   // at linear space
     vec3 plightResult   = pointLight.color * attenuation;
-    vec3 inj_pLight     = normalize(fPos - pointLight.pos);
-    vec3 diffuse_pLight = plightResult * texDiff.rgb * max(0.0f, dot(-inj_pLight, fNormal));
-    float pShadow       = pLightShadow(fPos);
+    inj_pLight          = normalize(inj_pLight);
+    vec3 diffuse_pLight = plightResult * texDiff.rgb * max(0.0f, dot(-inj_pLight, texNorm));
+    float pShadow       = pLightShadow(fPos, pointLightPosition);
     diffuse_pLight *= (1 - pShadow);
-//    diffuse_pLight = vec3(pShadow);
+//    diffuse_pLight = vec3(texNorm);
 
     // diffuse
     vec3 diffuse = diffuse_dLight + diffuse_pLight;
 
     // specular
     float shin          = max(7.82e-3, texes.shininess);     // 0.00782 * 128 ~= 1
-    vec3 view           = normalize(viewPos - fPos);
-    // Phong
-    //    vec3 ref_pLight     = reflect(inj_pLight, fNormal);
-    //    vec3 ref_dLight     = reflect(inj_dLight, fNormal);
-    //    vec3 spec_pLight    = pow(max(dot(view, ref_pLight), 0.0f), shin * 128) * plightResult;
-    //    vec3 spec_dLight    = pow(max(dot(view, ref_dLight), 0.0f), shin * 128) * directLight.color;
+    vec3 view           = normalize(viewPos_tanSpace - fragPos_tanSpace);
+
     // Blinn-Phong
-    vec3 halfway_dLight = normalize(-inj_dLight + view);
-    vec3 spec_dLight    = pow(max(dot(fNormal, halfway_dLight), 0.0f), shin * 128) * directLight.color;
+    vec3 halfway_dLight = normalize(-dLightInj_tanSpace + view);
+    vec3 spec_dLight    = pow(max(dot(texNorm, halfway_dLight), 0.0f), shin * 128) * directLight.color;
     spec_dLight *= (1 - dShadow);
+
     vec3 halfway_pLight = normalize(-inj_pLight + view);
-    vec3 spec_pLight    = pow(max(dot(fNormal, halfway_pLight), 0.0f), shin * 128) * plightResult;
+    vec3 spec_pLight    = pow(max(dot(texNorm, halfway_pLight), 0.0f), shin * 128) * plightResult;
     spec_pLight *= (1 - pShadow);
 
     vec3 specular       = (spec_pLight + spec_dLight) * texSpec.rgb;
-
-    // reflection
-    //    vec3 rayTrace       = -view;
-    //    vec3 reflectionVec  = reflect(rayTrace, fNormal);
-    //    vec3 reflection     = texture(environment, reflectionVec).rgb * texRfle.rgb;
 
     //    shadow = 1.0f;
 
@@ -120,8 +107,8 @@ vec3 cubeSampleOffsets[20] = {
         vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
 };
 
-float pLightShadow(vec3 fPos) {
-    vec3 injection = fPos - pointLight.pos;
+float pLightShadow(vec3 fPos, vec3 lightPos) {
+    vec3 injection = fPos - lightPos;
 
     float currDepth = length(injection);
 
