@@ -39,7 +39,6 @@ uniform DirectLight directLight;
 uniform Textures texes;
 uniform vec3 directLightInjection;
 uniform vec3 pointLightPosition;
-//uniform vec3 viewPos;
 
 
 float dLightShadow(vec4 fPosLSpace, vec3 lightInjction);
@@ -51,7 +50,7 @@ void main() {
     vec4 texSpec = texture(texes.specular0, fTexUV);
     vec4 texRfle = texture(texes.reflect0,  fTexUV);
     vec3 texNorm = texture(texes.normals0,  fTexUV).rgb;
-    texNorm = texNorm * 2 - 1;  // IMPORTANT!!!
+    texNorm = texNorm * 2 - 1;  // IMPORTANT!!! 需要把坐标从[0, 1]映射到[-1, +1]
 
     // ambient
     vec3 ambient = directLight.ambient * texDiff.rgb;
@@ -70,8 +69,7 @@ void main() {
     inj_pLight          = normalize(inj_pLight);
     vec3 diffuse_pLight = plightResult * texDiff.rgb * max(0.0f, dot(-inj_pLight, texNorm));
     float pShadow       = pLightShadow(fPos, pointLightPosition);
-    diffuse_pLight *= (1 - pShadow);
-//    diffuse_pLight = vec3(texNorm);
+    diffuse_pLight     *= (1 - pShadow);
 
     // diffuse
     vec3 diffuse = diffuse_dLight + diffuse_pLight;
@@ -83,20 +81,15 @@ void main() {
     // Blinn-Phong
     vec3 halfway_dLight = normalize(-dLightInj_tanSpace + view);
     vec3 spec_dLight    = pow(max(dot(texNorm, halfway_dLight), 0.0f), shin * 128) * directLight.color;
-    spec_dLight *= (1 - dShadow);
+    spec_dLight        *= (1 - dShadow);
 
     vec3 halfway_pLight = normalize(-inj_pLight + view);
     vec3 spec_pLight    = pow(max(dot(texNorm, halfway_pLight), 0.0f), shin * 128) * plightResult;
-    spec_pLight *= (1 - pShadow);
+    spec_pLight        *= (1 - pShadow);
 
     vec3 specular       = (spec_pLight + spec_dLight) * texSpec.rgb;
 
-    //    shadow = 1.0f;
-
     fragColor = vec4(ambient + diffuse + specular, 1);
-    //    fragColor = vec4(vec3(gl_FragCoord.z), 1.0);
-
-    //    fragColor = vec4(reflection, 1);
 }
 
 vec3 cubeSampleOffsets[20] = {
@@ -125,7 +118,7 @@ float pLightShadow(vec3 fPos, vec3 lightPos) {
 
 float dLightShadow(vec4 fPosLSpace, vec3 lightInjction) {
     vec3 projCoords = fPosLSpace.xyz / fPosLSpace.w;
-    // 将坐标范围从[-1, 1]转换到[0, 1]
+    // 将坐标范围从[-1, 1]映射到[0, 1]
     projCoords = (projCoords + 1) * 0.5;
     float currDepth = projCoords.z;
     float bias = max(0.001 * (1.0 - dot(fNormal, -lightInjction)), 0.0001);
@@ -143,7 +136,7 @@ float dLightShadow(vec4 fPosLSpace, vec3 lightInjction) {
             shadow += (currDepth - bias) > depth ? 1.0 : 0.0;
         }
     }
-    int kernelWidth = 2* offset + 1;
+    int kernelWidth = 2*offset + 1;
     shadow /= (kernelWidth * kernelWidth);
 
     return shadow;

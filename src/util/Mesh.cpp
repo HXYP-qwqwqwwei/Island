@@ -77,7 +77,4 @@ void Mesh::setupVertexAttribs() {
     glEnableVertexAttribArray(7);
     glVertexAttribPointer(7, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex3D), (void*)offsetof(Vertex3D, tangent));
 
-    glEnableVertexAttribArray(8);
-    glVertexAttribPointer(8, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex3D), (void*)offsetof(Vertex3D, bitangent));
-
 }

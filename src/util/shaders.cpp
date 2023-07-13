@@ -11,7 +11,6 @@ Shader* transparentShader;
 Shader* cutoutShader;
 Shader* screenShader;
 Shader* skyShader;
-//Shader* instancedShader;
 Shader* depthShader;
 Shader* depthCubeShader;
 
@@ -23,12 +22,6 @@ void compileShaders() {
     solidShader->loadShader("CompletedShader.vert", GL_VERTEX_SHADER);
     solidShader->loadShader("SolidShader.frag", GL_FRAGMENT_SHADER);
     solidShader->link();
-
-
-//    instancedShader = new Shader();
-//    instancedShader->loadShader("InstancedVert.vert", GL_VERTEX_SHADER);
-//    instancedShader->loadShader("SolidShader.frag", GL_FRAGMENT_SHADER);
-//    instancedShader->link();
 
 
     simpleShader = new Shader();
@@ -43,7 +36,7 @@ void compileShaders() {
 
     cutoutShader = new Shader();
     cutoutShader->loadShader("CompletedShader.vert", GL_VERTEX_SHADER);
-    cutoutShader->loadShader("TransparentShader.frag", GL_FRAGMENT_SHADER);
+    cutoutShader->loadShader("CutoutShader.frag", GL_FRAGMENT_SHADER);
     cutoutShader->link();
 
     screenShader = new Shader();

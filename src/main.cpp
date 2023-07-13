@@ -279,8 +279,8 @@ int main() {
         std::vector<glm::mat4> floorMats;
         floorMats.reserve(amount);
         glm::vec3 playerPos = camera.getPos();
-        Long chunkX = static_cast<int>(playerPos.x) >> 4;
-        Long chunkZ = static_cast<int>(playerPos.z) >> 4;
+        Long chunkX = static_cast<Long>(playerPos.x) >> 4;
+        Long chunkZ = static_cast<Long>(playerPos.z) >> 4;
         for (int i = -range; i <= range; ++i) {
             for (int j = -range; j <= range; ++j) {
                 Long x = (chunkX + i) << 4;

@@ -79,7 +79,6 @@ extern Shader* transparentShader;
 extern Shader* cutoutShader;
 extern Shader* screenShader;
 extern Shader* skyShader;
-//extern Shader* instancedShader;
 extern Shader* depthShader;
 extern Shader* depthCubeShader;
 

@@ -13,12 +13,6 @@ Model::Model(const std::vector<Mesh> &meshes) {
 }
 
 
-//void Model::draw(const Shader &Shader) const {
-//    for (const auto& mesh : this->meshes) {
-//        mesh.draw(Shader);
-//    }
-//}
-
 void Model::draw(const Shader &shader, const Buffer& matrixBuffer) const {
     matrixBuffer.bind();
     int instancedAmount = static_cast<int>(matrixBuffer.getSize() / sizeof(glm::mat4));
@@ -52,7 +46,7 @@ void Model::draw(const Shader &shader, const Buffer& matrixBuffer) const {
 
 void Model::loadModel(const std::string &path) {
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
+    const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
     // empty / incomplete / empty root
     if (scene == nullptr || (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) || !scene->mRootNode) {
         std::cerr << "ERROR::ASSIMP::" << importer.GetErrorString() << '\n';
@@ -95,18 +89,21 @@ void Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
         // pos, normal and uv
         auto& pos = mesh->mVertices[i];
         auto& norm = mesh->mNormals[i];
+        auto& T = mesh->mTangents[i];
+        auto& B = mesh->mBitangents[i];
         auto& uv = mesh->mTextureCoords[0][i];
         float u, v;
         if (mesh->mTextureCoords[0]) {
-            u = mesh->mTextureCoords[0][i].x;
-            v = mesh->mTextureCoords[0][i].y;
+            u = uv.x;
+            v = uv.y;
         } else {
             u = v = 0.0f;
         }
         vertices.push_back({
             {pos.x, pos.y, pos.z},
             {u, v},
-            {norm.x, norm.y, norm.z}
+            {norm.x, norm.y, norm.z},
+            {T.x, T.y, T.z},
         });
     }
     // Indices

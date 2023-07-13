@@ -21,11 +21,9 @@ class Model {
 public:
     explicit Model(const char* path);
     explicit Model(const std::vector<Mesh>& meshes);
-//    void draw(const Shader& Shader) const;
     void draw(const Shader& shader, const Buffer& matrixBuffer) const;
 
 private:
-//    int instancedAmount = 1;
     std::vector<Mesh> meshes;
     std::unordered_map<std::string, Texture2D> loadedTextures{};
     std::string directory;

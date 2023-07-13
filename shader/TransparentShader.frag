@@ -32,6 +32,7 @@ struct Textures {
     sampler2D diffuse0;
     sampler2D specular0;
     sampler2D normals0;
+    sampler2D trans0;
     float shininess;
 };
 

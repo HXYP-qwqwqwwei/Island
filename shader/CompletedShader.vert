@@ -4,7 +4,6 @@ layout (location = 1) in vec3 vNormal;
 layout (location = 2) in vec2 vTexUV;
 layout (location = 3) in mat4 vModel;   // location: 3, 4, 5, 6
 layout (location = 7) in vec3 vTangent;
-layout (location = 8) in vec3 vBitangent;
 
 layout (std140, binding = 0) uniform Matrics {
     mat4 view;
@@ -36,10 +35,11 @@ void main() {
     fPosLightSpace = lightSpaceMtx * vec4(fPos, 1.0);
 
     // Tangent Space Transform
-    vec3 T = normalize(model3x3 * vTangent);
-    vec3 B = normalize(model3x3 * vBitangent);
-    vec3 N = normalize(model3x3 * vNormal);
-    mat3 TBN_inverse = transpose(mat3(T, B, N));
+    vec3 T = model3x3 * vTangent;
+    T = normalize(T - dot(T, fNormal) * fNormal);   // Schmidt正交化
+    vec3 B = cross(fNormal, T);
+
+    mat3 TBN_inverse = transpose(mat3(T, B, fNormal));
     pLightPos_tanSpace  = TBN_inverse * pointLightPosition;
     dLightInj_tanSpace  = normalize(TBN_inverse * directLightInjection);
     fragPos_tanSpace    = TBN_inverse * fPos;
