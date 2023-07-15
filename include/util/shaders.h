@@ -13,6 +13,7 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
+#include "assimp/material.h"
 
 #define SZ_MAT4F sizeof(glm::mat4)
 #define SZ_MAT3F sizeof(glm::mat3)
@@ -50,6 +51,8 @@ public:
     void uniformVec4(const std::string& name, const glm::vec4& vec) const;
     void uniformFloat(const std::string& name, float fv) const;
     void uniformInt(const std::string& name, int iv) const;
+    void setDefaultTexture(aiTextureType type, GLuint tex, int idx) const;
+    void setEnvironmentMap(GLuint envMap) const;
 
     /*===== Uniform names =====*/
     static constexpr const char MODEL[] = "model";
@@ -57,6 +60,7 @@ public:
     static constexpr const char VIEW_POS[] = "viewPos";
     static constexpr const char SHININESS[] = "texes.shininess";
     static constexpr const char TEXTURES[] = "texes.";
+    static constexpr const char ENVIRONMENT_MAP[] = "environment";
     static constexpr const char PROJECTION[] = "proj";
     static constexpr const char CUBE_SPACE_MATRICES[6][21] = {
             "cubeSpaceMatrices[0]",
@@ -66,9 +70,7 @@ public:
             "cubeSpaceMatrices[4]",
             "cubeSpaceMatrices[5]",
     };
-    static constexpr const char Z_FAR[] = "zFar";
-    static const char* TextureName(int type);
-
+    static std::string TextureName(int type, int n = 0);
 
 };
 

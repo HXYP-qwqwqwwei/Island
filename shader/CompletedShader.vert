@@ -14,10 +14,10 @@ out vec3 fPos;
 out vec4 fPosLightSpace;
 out vec3 fNormal;
 out vec2 fTexUV;
-out vec3 pLightPos_tanSpace;
+out vec3 pLightInj_tanSpace;
 out vec3 dLightInj_tanSpace;
-out vec3 fragPos_tanSpace;
-out vec3 viewPos_tanSpace;
+out vec3 viewVec_tanSpace;
+out mat3 TBN;
 
 uniform mat4 lightSpaceMtx;
 uniform vec3 viewPos;
@@ -27,8 +27,8 @@ uniform vec3 pointLightPosition;
 void main() {
     vec4 posVec     = vModel * vec4(vPos, 1.0);
     gl_Position     = proj * view * posVec;
-    fPos     = posVec.xyz;
     mat3 model3x3   = mat3(vModel);
+    fPos     = posVec.xyz;
     fNormal  = normalize(model3x3 * vNormal);
     fTexUV   = vTexUV;
     // Light Space
@@ -39,9 +39,10 @@ void main() {
     T = normalize(T - dot(T, fNormal) * fNormal);   // Schmidt正交化
     vec3 B = cross(fNormal, T);
 
-    mat3 TBN_inverse = transpose(mat3(T, B, fNormal));
-    pLightPos_tanSpace  = TBN_inverse * pointLightPosition;
+    TBN = mat3(T, B, fNormal);
+    mat3 TBN_inverse    = transpose(mat3(TBN));
+    pLightInj_tanSpace  = TBN_inverse * (fPos - pointLightPosition);
     dLightInj_tanSpace  = normalize(TBN_inverse * directLightInjection);
-    fragPos_tanSpace    = TBN_inverse * fPos;
-    viewPos_tanSpace    = TBN_inverse * viewPos;
+//    fragPos_tanSpace    = TBN_inverse * fPos;
+    viewVec_tanSpace    = TBN_inverse * (viewPos - fPos);
 }

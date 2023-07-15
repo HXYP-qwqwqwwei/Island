@@ -4,8 +4,34 @@
 
 #include "util/texture_util.h"
 
+GLuint textures::MISSING;
+GLuint textures::BLACK_RGB;
+GLuint textures::WHITE_RGB;
+GLuint textures::BLACK_GRAY;
+GLuint textures::WHITE_GRAY;
+GLuint textures::FLAT_NORMALS;
+GLuint textures::FLAT_PARALLAX;
+GLuint textures::EMPTY_ENV_MAP;
 
-GLuint load_texture(const char* path, const std::string& directory, GLint parm, bool flipUV, bool sRGB) {
+
+
+void textures::loadDefaultTextures(const std::string& dir) {
+    MISSING = load_texture("missing.png", dir, GL_CLAMP_TO_EDGE, GL_NEAREST);
+    BLACK_RGB = load_texture("pure_black.png", dir);
+    WHITE_RGB = load_texture("pure_white.png", dir);
+    FLAT_NORMALS = load_texture("flat_normals.png", dir);
+    FLAT_PARALLAX = WHITE_RGB;
+
+    EMPTY_ENV_MAP = load_cube_map(
+            {"pure_black.png", "pure_black.png", "pure_black.png", "pure_black.png", "pure_black.png", "pure_black.png"},
+            dir
+    );
+
+}
+
+
+
+GLuint load_texture(const char* path, const std::string& directory, GLint warp, GLint filter, bool flipUV, bool sRGB) {
     int width, height, nrChannels;
     std::string fullPath = directory + '/' + path;
     GLuint id;
@@ -24,10 +50,10 @@ GLuint load_texture(const char* path, const std::string& directory, GLint parm, 
     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, parm);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, parm);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, warp);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, warp);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
 
     stbi_image_free(data);
     return id;
@@ -76,8 +102,8 @@ constexpr const std::tuple<glm::vec3, glm::vec3, glm::vec3> FOCAL_VECTORS[6] {
 };
 
 
-Texture2D load_texture(const char* path, const std::string& directory, aiTextureType type, GLint parm, bool flipUV) {
-    GLuint id = load_texture(path, directory, parm, flipUV, false);
+Texture2D load_texture(const char* path, const std::string& directory, aiTextureType type, GLint warp, GLint filter, bool flipUV) {
+    GLuint id = load_texture(path, directory, warp, filter, flipUV, false);
     return {
         id, type
     };

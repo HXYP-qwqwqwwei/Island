@@ -4,10 +4,10 @@ in vec3 fPos;
 in vec4 fPosLightSpace;
 in vec3 fNormal;
 in vec2 fTexUV;
-in vec3 pLightPos_tanSpace;
+in vec3 pLightInj_tanSpace;
 in vec3 dLightInj_tanSpace;
-in vec3 fragPos_tanSpace;
-in vec3 viewPos_tanSpace;
+in vec3 viewVec_tanSpace;
+in mat3 TBN;
 
 out vec4 fragColor;
 
@@ -30,6 +30,7 @@ struct Textures {
     sampler2D specular0;
     sampler2D normals0;
     sampler2D reflect0;
+    sampler2D parallax0;
     float shininess;
 };
 
@@ -41,47 +42,50 @@ uniform vec3 directLightInjection;
 uniform vec3 pointLightPosition;
 
 
-float dLightShadow(vec4 fPosLSpace, vec3 lightInjction);
+vec2 parallaxFixedUV(vec3 view);
 float pLightShadow(vec3 fPos, vec3 lightPos);
+float dLightShadow(vec4 fPosLSpace, vec3 lightInjction);
 
 
 void main() {
+    vec3 view    = normalize(viewVec_tanSpace);
+    vec2 fixedUV = parallaxFixedUV(view);
+
     vec4 texDiff = texture(texes.diffuse0,  fTexUV);
     if (texDiff.a < 0.05) {
         discard;
     }
-    vec4 texSpec = texture(texes.specular0, fTexUV);
-    vec4 texRfle = texture(texes.reflect0,  fTexUV);
-    vec3 texNorm = texture(texes.normals0,  fTexUV).rgb;
-    texNorm = texNorm * 2 - 1;  // IMPORTANT!!! 需要把坐标从[0, 1]映射到[-1, +1]
+    vec4 texSpec = texture(texes.specular0, fixedUV);
+    vec4 texRfle = texture(texes.reflect0,  fixedUV);
+    vec3 texNorm = texture(texes.normals0,  fixedUV).rgb;
+    texNorm = normalize(texNorm * 2.0 - 1.0);  // IMPORTANT!!! 需要把坐标从[0, 1]映射到[-1, +1]
+
 
     // ambient
     vec3 ambient = directLight.ambient * texDiff.rgb;
 
+
+    // diffuse
     // directional light
     vec3 diffuse_dLight = directLight.color * texDiff.rgb * max(0.0f, dot(-dLightInj_tanSpace, texNorm));
     float dShadow       = dLightShadow(fPosLightSpace, directLightInjection);
     diffuse_dLight     *= (1 - dShadow);
 
-
     // point light
-    vec3 inj_pLight     = fragPos_tanSpace - pLightPos_tanSpace;
+    vec3 inj_pLight     = pLightInj_tanSpace;
     float lightDis      = length(inj_pLight);
-    float attenuation   = 1.0 / (1.0 + lightDis * pointLight.linear);   // at linear space
+    float attenuation   = 1.0 / (lightDis * pointLight.linear);   // at linear space
     vec3 plightResult   = pointLight.color * attenuation;
     inj_pLight          = normalize(inj_pLight);
     vec3 diffuse_pLight = plightResult * texDiff.rgb * max(0.0f, dot(-inj_pLight, texNorm));
     float pShadow       = pLightShadow(fPos, pointLightPosition);
     diffuse_pLight     *= (1 - pShadow);
 
-    // diffuse
     vec3 diffuse = diffuse_dLight + diffuse_pLight;
 
-    // specular
-    float shin          = max(7.82e-3, texes.shininess);     // 0.00782 * 128 ~= 1
-    vec3 view           = normalize(viewPos_tanSpace - fragPos_tanSpace);
 
-    // Blinn-Phong
+    // specular: Blinn-Phong
+    float shin          = max(7.82e-3, texes.shininess);     // 0.00782 * 128 ~= 1
     vec3 halfway_dLight = normalize(-dLightInj_tanSpace + view);
     vec3 spec_dLight    = pow(max(dot(texNorm, halfway_dLight), 0.0f), shin * 128) * directLight.color;
     spec_dLight        *= (1 - dShadow);
@@ -92,22 +96,53 @@ void main() {
 
     vec3 specular       = (spec_pLight + spec_dLight) * texSpec.rgb;
 
-    fragColor = vec4(ambient + diffuse + specular, 1);
+
+    // reflection
+    vec3 refl = reflect(-view, texNorm);
+    vec3 reflection = texture(environment, TBN * refl).rgb * texRfle.rgb;
+
+    fragColor = vec4(ambient + diffuse + specular + reflection, 1);
 }
 
+
+vec2 parallaxFixedUV(vec3 view) {
+    float minLayers = 8;
+    float maxLayers = 32;
+
+    float nLayers = mix(minLayers, maxLayers, abs(dot(vec3(0, 0, 1), view)));
+    float layerDepth = 1 / nLayers;
+    vec2 dUV = -view.xy / (nLayers * view.z) * 0.1;
+
+    vec2 uv = fTexUV;
+    float depth = 1.0 - texture(texes.parallax0, uv).r;
+    float z = 0.0;
+    while (depth > z) {
+        z += layerDepth;
+        uv += dUV;
+        depth = 1.0 - texture(texes.parallax0, uv).r;
+    }
+    vec2 prevUV = uv - dUV;
+    float prevDepth = 1.0 - texture(texes.parallax0, prevUV).r;
+    float d2 = prevDepth - (z - layerDepth);
+    float d1 = z - depth;
+    uv -= dUV * d1 / (d1 + d2);     // 线性插值
+    return uv;
+}
+
+
 vec3 cubeSampleOffsets[20] = {
-vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1),
-vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
-vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
-vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
-vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
+        vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1),
+        vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
+        vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
+        vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
+        vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
 };
 
 float pLightShadow(vec3 fPos, vec3 lightPos) {
     vec3 injection = fPos - lightPos;
-
     float currDepth = length(injection);
 
+    // PCF
     float bias = max(0.01 * (1.0 - dot(fNormal, -normalize(injection))), 0.0003);
     float shadow = 0;
     for (int i = 0; i < 20; ++i) {

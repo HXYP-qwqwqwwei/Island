@@ -112,20 +112,31 @@ const Shader* selectCubeShader(RenderType type) {
 
 }
 
-const char* Shader::TextureName(int type) {
+std::string Shader::TextureName(int type, int n) {
+    std::string name;
+    name.reserve(20);
     switch (type) {
         case aiTextureType_DIFFUSE:
-            return "diffuse";
+            name = "diffuse";
+            break;
         case aiTextureType_SPECULAR:
-            return "specular";
+            name = "specular";
+            break;
         case aiTextureType_REFLECTION:
-            return "reflect";
+            name = "reflect";
+            break;
         case aiTextureType_NORMALS:
-            return "normals";
+            name = "normals";
+            break;
+        case aiTextureType_DISPLACEMENT:
+            name = "parallax";
+            break;
         default:
             std::cerr << "WARN::TEXTURE::Unsupported texture type:" << type << '\n';
             return "";
     }
+    name += std::to_string(n);
+    return name;
 }
 
 
@@ -186,4 +197,16 @@ void Shader::uniformFloat(const std::string &name, float fv) const {
 void Shader::uniformInt(const std::string &name, int iv) const {
     GLLoc loc = glGetUniformLocation(shaderProgram, name.c_str());
     glUniform1iv(loc, 1, &iv);
+}
+
+void Shader::setDefaultTexture(aiTextureType type, GLuint tex, int idx) const {
+    glActiveTexture(GL_TEXTURE0 + idx);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    this->uniformInt(Shader::TEXTURES + Shader::TextureName(type), idx);
+}
+
+void Shader::setEnvironmentMap(GLuint envMap) const {
+    glActiveTexture(GL_TEXTURE29);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, envMap);
+    this->uniformInt(Shader::ENVIRONMENT_MAP, 29);
 }

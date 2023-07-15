@@ -13,7 +13,7 @@
 #include "util/Screen.h"
 #include "util/buffer_util.h"
 #include "util/light_util.h"
-#include "util/ModelManager.h"
+#include "util/render_util.h"
 
 using GLObject = GLuint;
 using GLLoc = GLint;
@@ -50,51 +50,54 @@ int main() {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     const std::string dir = "resources/textures";
+    textures::loadDefaultTextures(dir);
     Texture2D cubeDiff = load_texture("container2.png", dir, aiTextureType_DIFFUSE);
     Texture2D cubeSpec = load_texture("container2_specular.png", dir, aiTextureType_SPECULAR);
     Texture2D cubeRefl = load_texture("container2_specular.png", dir, aiTextureType_REFLECTION);
     Texture2D cubeNorm = load_texture("container2_normals.png", dir, aiTextureType_NORMALS);
 
+    std::string s = std::to_string(1.234);
+    std::reverse(s.begin(), s.end());
+
+    Texture2D toyBoxDiff = load_texture("toy_box_diffuse.png", dir, aiTextureType_DIFFUSE);
+    Texture2D toyBoxSpec = {textures::WHITE_RGB, aiTextureType_SPECULAR};
+    Texture2D toyBoxNorm = load_texture("toy_box_normal.png", dir, aiTextureType_NORMALS);
+    Texture2D toyBoxPara = load_texture("toy_box_disp.png", dir, aiTextureType_DISPLACEMENT);
+
     Texture2D floorDiff = load_texture("plank_flooring_diff_1k.jpg", dir, aiTextureType_DIFFUSE);
     Texture2D floorSpec = load_texture("plank_flooring_rough_1k.jpg", dir, aiTextureType_SPECULAR);
     Texture2D floorNorm = load_texture("plank_flooring_nor_gl_1k.jpg", dir, aiTextureType_NORMALS);
     Texture2D grassDiff = load_texture("grass.png", dir, aiTextureType_DIFFUSE, GL_CLAMP_TO_EDGE);
-    Texture2D emptySpec = load_texture("pure_black.png", dir, aiTextureType_SPECULAR);
     Texture2D windowTexDiff = load_texture("window_transparent.png", dir, aiTextureType_DIFFUSE);
-
-    Texture2D flatNorm = load_texture("flat.png", dir, aiTextureType_NORMALS);
 
     GLuint skyBoxTex = load_cube_map(
             {"skybox/right.jpg", "skybox/left.jpg", "skybox/top.jpg", "skybox/bottom.jpg", "skybox/front.jpg", "skybox/back.jpg"},
             dir
     );
 
-    GLuint emptyEnvMap = load_cube_map(
-            {"pure_black.png", "pure_black.png", "pure_black.png", "pure_black.png", "pure_black.png", "pure_black.png"},
-            dir
-    );
-
-    GLuint emptyShadow = load_texture("pure_black.png", dir);
-
     // Models
     Model nanoSuitModel("resources/nanosuit/nanosuit.obj");
     ModelManager modelManager;
     {
-        auto cube           = [=]() -> Model {return shapes::Cube(1, {cubeDiff, cubeSpec, cubeNorm});};
+        auto cube           = [=]() -> Model {return shapes::Cube(1, {cubeDiff, cubeRefl, cubeSpec, cubeNorm});};
         auto lightCube      = [=]() -> Model {return shapes::Cube(0.2f);};
         auto woodenFloor    = [=]() -> Model {return shapes::Rectangle(16, 16, {floorDiff, floorSpec, floorNorm});};
-        auto rgbWindow      = [=]() -> Model {return shapes::Rectangle(1, 1, {windowTexDiff, emptySpec});};
-        auto grass          = [=]() -> Model {return shapes::Rectangle(1, 1, {grassDiff, emptySpec, flatNorm});};
+        auto rgbWindow      = [=]() -> Model {return shapes::Rectangle(1, 1, {windowTexDiff});};
+        auto grass          = [=]() -> Model {return shapes::Rectangle(1, 1, {grassDiff});};
+        auto toyBox     = [=]() -> Model {
+            return shapes::Cube(1, {toyBoxDiff, toyBoxNorm, toyBoxPara, toyBoxSpec});
+        };
 
         modelManager.put(cube, "cube");
         modelManager.put(woodenFloor, "wooden_floor");
         modelManager.put(lightCube, "light_cube");
         modelManager.put(rgbWindow, "rgb_window");
         modelManager.put(grass, "grass");
+        modelManager.put(toyBox, "toy_box");
     }
 
     // Sky box
-    SkyBox* skyBox  = shapes::SkyBoxCube(skyBoxTex);
+//    SkyBox* skyBox  = shapes::SkyBoxCube(skyBoxTex);
 
 
     glEnable(GL_STENCIL_TEST);
@@ -110,7 +113,6 @@ int main() {
     int shadowRes = 4096;
     FrameBuffer directShadowMap(shadowRes, shadowRes, DEPTH, true);
     FrameBufferCube pointShadowMap(shadowRes, COLOR | DEPTH);
-    Screen* depthScreen  = shapes::ScreenRect({directShadowMap.getTexture()});
 
     // Uniform buffer
     Buffer pvMatBuffer(GL_UNIFORM_BUFFER);
@@ -121,13 +123,13 @@ int main() {
 //    glm::vec3 pLight(1, 1, 1);
     PointLight pLight {
             glm::vec3(1.0f),
-            glm::vec3(-1, 1, 1.5),
-            0.0, 0.02, 25.0,
+            glm::vec3(-3, 1, -3.),
+            .8, 0.02, 25.0,
             pointShadowMap.getDepthCubeMap()
     };
 
     DirectionalLight dLight {
-            glm::vec3(0.5f),
+            glm::vec3(0.0f),
             glm::vec3(-1, -2, -1.5),
             glm::vec3(0.2f),
             directShadowMap.getDepthStencilTex()
@@ -140,6 +142,7 @@ int main() {
 
     double t0 = glfwGetTime();
     Camera camera(initPos);
+    GLuint envMap = textures::EMPTY_ENV_MAP;
 
     glGetError();
     // render loop
@@ -152,7 +155,7 @@ int main() {
         gameSPF = static_cast<float>(t1 - t0);
         t0 = t1;
 
-        pLight.pos = glm::vec3(3*cos(t1) - 1, 1, 3*sin(t1) - 1);
+//        pLight.pos = glm::vec3(3*cos(t1) - 1, 1, 3*sin(t1) - 1);
 
         glm::mat4 modelMtx(1.0f);
         // camera
@@ -189,6 +192,11 @@ int main() {
         modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
         render(model, SHADOW, camera, modelMtx, pLight, dLight);
 
+        model = modelManager.getModel("toy_box");
+        modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
+        render(model, SHADOW, camera, modelMtx, pLight, dLight);
+
+
         // two grass
         modelMtx = glm::translate(glm::mat4(1), glm::vec3(-1, 0, 0.5f));
         model = modelManager.getModel("grass");
@@ -205,18 +213,23 @@ int main() {
 
         modelMtx = glm::mat4(1.0f);
         model = modelManager.getModel("cube");
-        renderCube(model, SHADOW, pLight.pos, &modelMtx, 1, pLight, dLight);
+        renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
 
         modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
-        renderCube(model, SHADOW, pLight.pos, &modelMtx, 1, pLight, dLight);
+        renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
+
+        model = modelManager.getModel("toy_box");
+        modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
+        renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
+
 
         // two grass
         modelMtx = glm::translate(glm::mat4(1), glm::vec3(-1, 0, 0.5f));
         model = modelManager.getModel("grass");
-        renderCube(model, SHADOW, pLight.pos, &modelMtx, 1, pLight, dLight);
+        renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
 
         modelMtx = glm::translate(modelMtx, glm::vec3(2, 0, 0));
-        renderCube(model, SHADOW, pLight.pos, &modelMtx, 1, pLight, dLight);
+        renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
 
 
         glViewport(0, 0, gameScrWidth, gameScrHeight);
@@ -258,15 +271,20 @@ int main() {
 //        nanoSuitModel.Draw(solidShader);
 //        cube->draw(*solidShader);
         solidShader->use();
+        solidShader->setEnvironmentMap(envMap);
         solidShader->uniformMatrix4fv("lightSpaceMtx", lightSpaceMtx);
 
         modelMtx = glm::mat4(1.0f);
         model = modelManager.getModel("cube");
         render(model, SOLID, camera, modelMtx, pLight, dLight);
 
-
         modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
         render(model, SOLID, camera, modelMtx, pLight, dLight);
+
+        model = modelManager.getModel("toy_box");
+        modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
+        render(model, SOLID, camera, modelMtx, pLight, dLight);
+
 
         // close stencil test
 //        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);  // whe
@@ -315,6 +333,8 @@ int main() {
 
         /*================ cutout items ================*/
         // two grass
+        cutoutShader->use();
+        cutoutShader->setEnvironmentMap(envMap);
         modelMtx = glm::translate(glm::mat4(1), glm::vec3(-1, 0, 0.5f));
         model = modelManager.getModel("grass");
         render(model, CUTOUT, camera, modelMtx, pLight, dLight);

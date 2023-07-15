@@ -23,7 +23,7 @@ add_executable(
         src/util/SkyBox.cpp
         src/util/buffer_util.cpp
         src/util/light_util.cpp
-        src/util/ModelManager.cpp
+        src/util/render_util.cpp
         src/util/ClientWorld.cpp
         src/main.cpp
 )
