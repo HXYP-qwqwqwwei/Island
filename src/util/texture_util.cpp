@@ -12,6 +12,7 @@ GLuint textures::WHITE_GRAY;
 GLuint textures::FLAT_NORMALS;
 GLuint textures::FLAT_PARALLAX;
 GLuint textures::EMPTY_ENV_MAP;
+GLuint textures::EMPTY_SHADOW;
 
 
 
@@ -19,6 +20,8 @@ void textures::loadDefaultTextures(const std::string& dir) {
     MISSING = load_texture("missing.png", dir, GL_CLAMP_TO_EDGE, GL_NEAREST);
     BLACK_RGB = load_texture("pure_black.png", dir);
     WHITE_RGB = load_texture("pure_white.png", dir);
+    BLACK_GRAY = load_texture("pure_black_gray.png", dir);
+    WHITE_GRAY = load_texture("pure_white_gray.png", dir);
     FLAT_NORMALS = load_texture("flat_normals.png", dir);
     FLAT_PARALLAX = WHITE_RGB;
 
@@ -26,6 +29,15 @@ void textures::loadDefaultTextures(const std::string& dir) {
             {"pure_black.png", "pure_black.png", "pure_black.png", "pure_black.png", "pure_black.png", "pure_black.png"},
             dir
     );
+
+    EMPTY_SHADOW = load_cube_map(
+            {"pure_black_gray.png", "pure_black_gray.png", "pure_black_gray.png", "pure_black_gray.png", "pure_black_gray.png", "pure_black_gray.png"},
+            dir
+    );
+
+    std::cout << EMPTY_SHADOW << '\n';
+    EMPTY_POINT_LIGHT.shadow = EMPTY_SHADOW;
+    EMPTY_DIRECTIONAL_LIGHT.shadow = EMPTY_SHADOW;
 
 }
 

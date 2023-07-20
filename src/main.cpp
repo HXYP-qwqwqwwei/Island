@@ -144,6 +144,8 @@ int main() {
             directShadowMap.getDepthStencilTex()
     };
 
+    Light light(dLight, {pLight});
+
 
     Camera dLightCamera(dLight.injection * -3.0f , -glm::normalize(dLight.injection));
     glm::mat4 dLightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 100.0f);
@@ -158,7 +160,10 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
         // input
         // ...
-
+        int err = glGetError();
+        if (err != 0) {
+            std::cout << "ERROR::OpenGL code: " << err << '\n';
+        }
         // rendering
         double t1 = glfwGetTime();
         gameSPF = static_cast<float>(t1 - t0);
@@ -197,23 +202,23 @@ int main() {
             // draw
             modelMtx = glm::mat4(1.0f);
             model = modelManager.getModel("cube");
-            render(model, SHADOW, camera, modelMtx, pLight, dLight);
+            render(model, SHADOW, camera, modelMtx, light);
 
             modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
-            render(model, SHADOW, camera, modelMtx, pLight, dLight);
+            render(model, SHADOW, camera, modelMtx, light);
 
             model = modelManager.getModel("toy_box");
             modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
-            render(model, SHADOW, camera, modelMtx, pLight, dLight);
+            render(model, SHADOW, camera, modelMtx, light);
 
 
             // two grass
             modelMtx = glm::translate(glm::mat4(1), glm::vec3(-1, 0, 0.5f));
             model = modelManager.getModel("grass");
-            render(model, SHADOW, camera, modelMtx, pLight, dLight);
+            render(model, SHADOW, camera, modelMtx, light);
 
             modelMtx = glm::translate(modelMtx, glm::vec3(2, 0, 0));
-            render(model, SHADOW, camera, modelMtx, pLight, dLight);
+            render(model, SHADOW, camera, modelMtx, light);
         }
 
         directShadowMap.unbind();
@@ -225,23 +230,23 @@ int main() {
         {
             modelMtx = glm::mat4(1.0f);
             model = modelManager.getModel("cube");
-            renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
+            renderPointShadow(model, SHADOW, pLight.pos, modelMtx, pLight);
 
             modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
-            renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
+            renderPointShadow(model, SHADOW, pLight.pos, modelMtx, pLight);
 
             model = modelManager.getModel("toy_box");
             modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
-            renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
+            renderPointShadow(model, SHADOW, pLight.pos, modelMtx, pLight);
 
 
             // two grass
             modelMtx = glm::translate(glm::mat4(1), glm::vec3(-1, 0, 0.5f));
             model = modelManager.getModel("grass");
-            renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
+            renderPointShadow(model, SHADOW, pLight.pos, modelMtx, pLight);
 
             modelMtx = glm::translate(modelMtx, glm::vec3(2, 0, 0));
-            renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
+            renderPointShadow(model, SHADOW, pLight.pos, modelMtx, pLight);
         }
 
         glViewport(0, 0, gameScrWidth, gameScrHeight);
@@ -288,14 +293,14 @@ int main() {
 
         modelMtx = glm::mat4(1.0f);
         model = modelManager.getModel("cube");
-        render(model, SOLID, camera, modelMtx, pLight, dLight);
+        render(model, SOLID, camera, modelMtx, light);
 
         modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
-        render(model, SOLID, camera, modelMtx, pLight, dLight);
+        render(model, SOLID, camera, modelMtx, light);
 
         model = modelManager.getModel("toy_box");
         modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
-        render(model, SOLID, camera, modelMtx, pLight, dLight);
+        render(model, SOLID, camera, modelMtx, light);
 
 
         // close stencil test
@@ -324,7 +329,7 @@ int main() {
         solidShader->use();
         solidShader->uniformMatrix4fv("lightSpaceMtx", lightSpaceMtx);
         model = modelManager.getModel("wooden_floor");
-        render(model, SOLID, camera, &floorMats[0], floorMats.size(), pLight, dLight);
+        render(model, SOLID, camera, &floorMats[0], floorMats.size(), light);
 
 
         /*================ point light ================*/
@@ -333,7 +338,7 @@ int main() {
         modelMtx = glm::mat4(1.0f);
         modelMtx = glm::translate(modelMtx, pLight.pos);
         model = modelManager.getModel("light_cube");
-        render(model, PURE, camera, modelMtx, pLight, dLight);
+        render(model, PURE, camera, modelMtx, light);
 
 
         /*================ sky box ================*/
@@ -349,10 +354,10 @@ int main() {
         cutoutShader->setEnvironmentMap(envMap);
         modelMtx = glm::translate(glm::mat4(1), glm::vec3(-1, 0, 0.5f));
         model = modelManager.getModel("grass");
-        render(model, CUTOUT, camera, modelMtx, pLight, dLight);
+        render(model, CUTOUT, camera, modelMtx, light);
 
         modelMtx = glm::translate(modelMtx, glm::vec3(2, 0, 0));
-        render(model, CUTOUT, camera, modelMtx, pLight, dLight);
+        render(model, CUTOUT, camera, modelMtx, light);
 
 
 
@@ -373,7 +378,7 @@ int main() {
 
         /*================ Transparent: two rgbWindows ================*/
         transparentShader->use();
-        setupLight(transparentShader, pLight, dLight);
+        setupLight(transparentShader, light);
         transparentShader->uniformVec3("viewPos", camera.getPos());
 
         glm::vec3 poses[3];
@@ -387,7 +392,7 @@ int main() {
         model = modelManager.getModel("rgb_window");
         for (const auto& pos : poses) {
             glm::mat4 m(1);
-            render(model, TRANSPARENT, camera, glm::translate(m, pos), pLight, dLight);
+            render(model, TRANSPARENT, camera, glm::translate(m, pos), light);
         }
 
 

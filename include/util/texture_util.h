@@ -17,6 +17,7 @@
 #include "glm/glm.hpp"
 #include "glad/glad.h"
 #include "assimp/defs.h"
+#include "light_util.h"
 
 struct Vertex2D {
     glm::vec2 position;
@@ -53,6 +54,7 @@ namespace textures {
     extern GLuint FLAT_NORMALS;
     extern GLuint FLAT_PARALLAX;
     extern GLuint EMPTY_ENV_MAP;
+    extern GLuint EMPTY_SHADOW;
 
     void loadDefaultTextures(const std::string& dir);
 }

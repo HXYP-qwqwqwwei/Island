@@ -25,17 +25,13 @@ private:
     std::unordered_map<std::string, uint> names;
 };
 
-void render(const Model* model, RenderType type, const Camera& camera, const glm::mat4* transMtx, size_t amount,
-            const PLight& pLight, const DLight& dLight);
+void render(const Model* model, RenderType type, const Camera& camera, const glm::mat4* transMtx, size_t amount, const Light& light);
 
-void render(const Model* model, RenderType type, const Camera& camera, const glm::mat4& transMtx,
-            const PLight& pLight, const DLight& dLight);
+void render(const Model* model, RenderType type, const Camera& camera, const glm::mat4& transMtx, const Light& light);
 
-void renderCube(const Model* model, RenderType type, const glm::vec3& center, const glm::mat4* transMtx, size_t amount,
-                const PLight& pLight, const DLight& dLight);
+void renderPointShadow(const Model* model, RenderType type, const glm::vec3& center, const glm::mat4* transMtx, size_t amount, const PLight& light);
 
-void renderCube(const Model* model, RenderType type, const glm::vec3& center, const glm::mat4& transMtx,
-                const PLight& pLight, const DLight& dLight);
+void renderPointShadow(const Model* model, RenderType type, const glm::vec3& center, const glm::mat4& transMtx, const PLight& light);
 
 
 #endif //ISLAND_MODEL_MANAGER_H

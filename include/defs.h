@@ -8,4 +8,7 @@
 typedef unsigned int uint;
 typedef long long Long;
 
+#define max(a, b) (a > b ? a : b)
+#define min(a, b) (a < b ? a : b)
+
 #endif //ISLAND_DEFS_H

@@ -14,7 +14,7 @@ out vec3 fPos;
 out vec4 fPosLightSpace;
 out vec3 fNormal;
 out vec2 fTexUV;
-out vec3 pLightInj_tanSpace;
+out vec3 pLightInj_tanSpace[4];
 out vec3 dLightInj_tanSpace;
 out vec3 viewVec_tanSpace;
 out mat3 TBN;
@@ -22,7 +22,18 @@ out mat3 TBN;
 uniform mat4 lightSpaceMtx;
 uniform vec3 viewPos;
 uniform vec3 directLightInjection;
-uniform vec3 pointLightPosition;
+//uniform vec3 pointLightPositions[4];
+
+struct PointLight {
+    vec3 pos;
+    vec3 color;
+    float linear;
+    float zFar;
+    samplerCube shadowMap;
+};
+
+uniform PointLight pointLights[4];
+
 
 void main() {
     vec4 posVec     = vModel * vec4(vPos, 1.0);
@@ -41,7 +52,9 @@ void main() {
 
     TBN = mat3(T, B, fNormal);
     mat3 TBN_inverse    = transpose(mat3(TBN));
-    pLightInj_tanSpace  = TBN_inverse * (fPos - pointLightPosition);
+    for (int i = 0; i < 4; ++i) {
+        pLightInj_tanSpace[i].xyz = TBN_inverse * (fPos - pointLights[i].pos);
+    }
     dLightInj_tanSpace  = normalize(TBN_inverse * directLightInjection);
     viewVec_tanSpace    = TBN_inverse * (viewPos - fPos);
 }
