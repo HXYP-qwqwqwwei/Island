@@ -18,6 +18,8 @@
 using GLObject = GLuint;
 using GLLoc = GLint;
 
+#define ISLAND_ENABLE_HDR
+
 int main() {
     glfwInit();
     // OpenGL 3.3
@@ -67,6 +69,7 @@ int main() {
     Texture2D floorDiff = load_texture("plank_flooring_diff_1k.jpg", dir, aiTextureType_DIFFUSE);
     Texture2D floorSpec = load_texture("plank_flooring_rough_1k.jpg", dir, aiTextureType_SPECULAR);
     Texture2D floorNorm = load_texture("plank_flooring_nor_gl_1k.jpg", dir, aiTextureType_NORMALS);
+//    Texture2D floorPara = load_texture("plank_flooring_disp_1k.jpg", dir, aiTextureType_DISPLACEMENT);
     Texture2D grassDiff = load_texture("grass.png", dir, aiTextureType_DIFFUSE, GL_CLAMP_TO_EDGE);
     Texture2D windowTexDiff = load_texture("window_transparent.png", dir, aiTextureType_DIFFUSE);
 
@@ -106,8 +109,14 @@ int main() {
     glBlendEquation(GL_FUNC_ADD);   // default
 
     // Screen
+#ifdef ISLAND_ENABLE_HDR
+    FrameBuffer frameBuffer(gameScrWidth, gameScrHeight, COLOR | HDR);
+    frameBuffer.enableMSAA(COLOR | HDR | DEPTH | STENCIL, 4);
+#else
     FrameBuffer frameBuffer(gameScrWidth, gameScrHeight, COLOR);
     frameBuffer.enableMSAA(COLOR | DEPTH | STENCIL, 4);
+#endif
+
     Screen* screen  = shapes::ScreenRect({frameBuffer.getTexture()});
 
     int shadowRes = 4096;
@@ -122,16 +131,16 @@ int main() {
 
 //    glm::vec3 pLight(1, 1, 1);
     PointLight pLight {
-            glm::vec3(1.0f),
+            glm::vec3(100.0f),
             glm::vec3(-3, 1, -3.),
-            .8, 0.02, 25.0,
+            1.0, 0.02, 25.0,
             pointShadowMap.getDepthCubeMap()
     };
 
     DirectionalLight dLight {
-            glm::vec3(0.0f),
+            glm::vec3(.0f),
             glm::vec3(-1, -2, -1.5),
-            glm::vec3(0.2f),
+            glm::vec3(.01f),
             directShadowMap.getDepthStencilTex()
     };
 
@@ -164,6 +173,7 @@ int main() {
         const glm::mat4 view = camera.getView();
         const glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float) gameScrWidth / (float)gameScrHeight, 0.1f, 100.0f);
         const Model* model;
+        glm::mat4 lightSpaceMtx;
 
         // uniform buffer -- projection and view matrix
         pvMatBuffer.bind();
@@ -177,60 +187,62 @@ int main() {
 
         glEnable(GL_DEPTH_TEST);
         glClear(GL_DEPTH_BUFFER_BIT);
+        {
+            depthShader->use();
+            depthShader->uniformMatrix4fv(Shader::VIEW, dLightView);
+            depthShader->uniformMatrix4fv(Shader::PROJECTION, dLightProj);
+            depthShader->uniformMatrix4fv(Shader::MODEL, glm::translate(glm::mat4(1.0), glm::vec3(0, 0, -5.0)));
+            lightSpaceMtx = dLightProj * dLightView;
 
-        depthShader->use();
-        depthShader->uniformMatrix4fv(Shader::VIEW, dLightView);
-        depthShader->uniformMatrix4fv(Shader::PROJECTION, dLightProj);
-        depthShader->uniformMatrix4fv(Shader::MODEL, glm::translate(glm::mat4(1.0), glm::vec3(0, 0, -5.0)));
-        glm::mat4 lightSpaceMtx = dLightProj * dLightView;
+            // draw
+            modelMtx = glm::mat4(1.0f);
+            model = modelManager.getModel("cube");
+            render(model, SHADOW, camera, modelMtx, pLight, dLight);
 
-        // draw
-        modelMtx = glm::mat4(1.0f);
-        model = modelManager.getModel("cube");
-        render(model, SHADOW, camera, modelMtx, pLight, dLight);
+            modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
+            render(model, SHADOW, camera, modelMtx, pLight, dLight);
 
-        modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
-        render(model, SHADOW, camera, modelMtx, pLight, dLight);
-
-        model = modelManager.getModel("toy_box");
-        modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
-        render(model, SHADOW, camera, modelMtx, pLight, dLight);
+            model = modelManager.getModel("toy_box");
+            modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
+            render(model, SHADOW, camera, modelMtx, pLight, dLight);
 
 
-        // two grass
-        modelMtx = glm::translate(glm::mat4(1), glm::vec3(-1, 0, 0.5f));
-        model = modelManager.getModel("grass");
-        render(model, SHADOW, camera, modelMtx, pLight, dLight);
+            // two grass
+            modelMtx = glm::translate(glm::mat4(1), glm::vec3(-1, 0, 0.5f));
+            model = modelManager.getModel("grass");
+            render(model, SHADOW, camera, modelMtx, pLight, dLight);
 
-        modelMtx = glm::translate(modelMtx, glm::vec3(2, 0, 0));
-        render(model, SHADOW, camera, modelMtx, pLight, dLight);
+            modelMtx = glm::translate(modelMtx, glm::vec3(2, 0, 0));
+            render(model, SHADOW, camera, modelMtx, pLight, dLight);
+        }
 
         directShadowMap.unbind();
+
+
         pointShadowMap.bind();
         glEnable(GL_DEPTH_TEST);
         glClear(GL_DEPTH_BUFFER_BIT);
+        {
+            modelMtx = glm::mat4(1.0f);
+            model = modelManager.getModel("cube");
+            renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
+
+            modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
+            renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
+
+            model = modelManager.getModel("toy_box");
+            modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
+            renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
 
 
-        modelMtx = glm::mat4(1.0f);
-        model = modelManager.getModel("cube");
-        renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
+            // two grass
+            modelMtx = glm::translate(glm::mat4(1), glm::vec3(-1, 0, 0.5f));
+            model = modelManager.getModel("grass");
+            renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
 
-        modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
-        renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
-
-        model = modelManager.getModel("toy_box");
-        modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
-        renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
-
-
-        // two grass
-        modelMtx = glm::translate(glm::mat4(1), glm::vec3(-1, 0, 0.5f));
-        model = modelManager.getModel("grass");
-        renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
-
-        modelMtx = glm::translate(modelMtx, glm::vec3(2, 0, 0));
-        renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
-
+            modelMtx = glm::translate(modelMtx, glm::vec3(2, 0, 0));
+            renderCube(model, SHADOW, pLight.pos, modelMtx, pLight, dLight);
+        }
 
         glViewport(0, 0, gameScrWidth, gameScrHeight);
 
@@ -238,7 +250,7 @@ int main() {
         frameBuffer.bind();
 
         // 每当glClear被调用，color buffer都将被填充为glClearColor中配置的颜色
-        glClearColor(0.1, 0.1, 0.1, 1.0F);
+        glClearColor(dLight.ambient.r, dLight.ambient.g, dLight.ambient.b, 1.0F);
         // Depth test
 //        glDepthMask(GL_FALSE);  // Read-Only
         glDepthFunc(GL_LESS);   // Default
@@ -250,9 +262,9 @@ int main() {
         // 清除上一帧的颜色/深度测试/模板测试缓冲
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LEQUAL);
+
 
 
         /*================ solid items ================*/
@@ -317,7 +329,7 @@ int main() {
 
         /*================ point light ================*/
         simpleShader->use();
-        simpleShader->uniformVec3("color", glm::vec3(1, 1, 1));
+        simpleShader->uniformVec3("color", pLight.color);
         modelMtx = glm::mat4(1.0f);
         modelMtx = glm::translate(modelMtx, pLight.pos);
         model = modelManager.getModel("light_cube");
@@ -384,8 +396,14 @@ int main() {
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         glDisable(GL_DEPTH_TEST);
+
+#ifdef ISLAND_ENABLE_HDR
+        screenShaderHDR->use();
+        screen->draw(*screenShaderHDR);
+#else
         screenShader->use();
         screen->draw(*screenShader);
+#endif
 
         glfwSwapBuffers(window);
         // 检查所有事件并更新窗口状态，否则窗口将无法响应外部输入（包括鼠标和键盘）

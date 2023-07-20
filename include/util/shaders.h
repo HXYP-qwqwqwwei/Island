@@ -80,6 +80,7 @@ extern Shader* simpleShader;
 extern Shader* transparentShader;
 extern Shader* cutoutShader;
 extern Shader* screenShader;
+extern Shader* screenShaderHDR;
 extern Shader* skyShader;
 extern Shader* depthShader;
 extern Shader* depthCubeShader;

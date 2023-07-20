@@ -31,7 +31,7 @@ void textures::loadDefaultTextures(const std::string& dir) {
 
 
 
-GLuint load_texture(const char* path, const std::string& directory, GLint warp, GLint filter, bool flipUV, bool sRGB) {
+GLuint load_texture(const char* path, const std::string& directory, GLint warp, GLint filter, bool flipUV) {
     int width, height, nrChannels;
     std::string fullPath = directory + '/' + path;
     GLuint id;
@@ -41,13 +41,14 @@ GLuint load_texture(const char* path, const std::string& directory, GLint warp, 
         std::cerr << "ERROR::TEXTURE::Failed to load texture at \"" << fullPath << "\"\n";
         return 0;
     }
-    auto formatTuple = tex_format(nrChannels);
-    GLint format = get<RGB>(formatTuple);
-    GLint internalFormat = sRGB ? get<SRGB>(formatTuple) : format;
-    if (internalFormat == -1) return 0;
+    GLint format = tex_format(nrChannels);
+    if (format == -1) {
+        stbi_image_free(data);
+        return 0;
+    }
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_2D, id);
-    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, warp);
@@ -74,13 +75,13 @@ GLuint load_cube_map(std::initializer_list<std::string> paths, const std::string
             return 0;
         }
         auto format = tex_format(nrChannels);
-        if (get<SRGB>(format) == -1) {
+        if (format == -1) {
             stbi_image_free(data);
             return 0;
         }
         glTexImage2D(
                 GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-                0, get<RGB>(format), width, height, 0, get<RGB>(format), GL_UNSIGNED_BYTE, data
+                0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data
         );
         stbi_image_free(data);
     }
@@ -103,7 +104,7 @@ constexpr const std::tuple<glm::vec3, glm::vec3, glm::vec3> FOCAL_VECTORS[6] {
 
 
 Texture2D load_texture(const char* path, const std::string& directory, aiTextureType type, GLint warp, GLint filter, bool flipUV) {
-    GLuint id = load_texture(path, directory, warp, filter, flipUV, false);
+    GLuint id = load_texture(path, directory, warp, filter, flipUV);
     return {
         id, type
     };
@@ -111,16 +112,16 @@ Texture2D load_texture(const char* path, const std::string& directory, aiTexture
 
 
 
-std::tuple<GLint, GLint> tex_format(int nrChannels) {
+GLint tex_format(int nrChannels) {
     switch (nrChannels) {
         case 1:
-            return {GL_RED, GL_RED};
+            return GL_RED;
         case 3:
-            return {GL_SRGB, GL_RGB};
+            return GL_RGB;
         case 4:
-            return {GL_SRGB_ALPHA, GL_RGBA};
+            return GL_RGBA;
         default:
             std::cerr << "ERROR::TEXTURE::Unsupported file format\n";
-            return {-1, -1};
+            return -1;
     }
 }

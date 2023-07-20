@@ -9,11 +9,12 @@
 #include "glad/glad.h"
 #include "defs.h"
 
-#define COLOR 0x1   // 0
-#define DEPTH 0x2   // 1
-#define STENCIL 0x4 // 2
+#define COLOR 0x1       // 0
+#define DEPTH 0x2       // 1
+#define STENCIL 0x4     // 2
 #define MSAA(S) ((S - 1) << 3)  // 3 ~ 6
 #define MSAA_SAMPLES(M) (((M >> 3) & 0xF) + 1)
+#define HDR 0x80        // 7
 
 class Buffer {
 public:
@@ -69,11 +70,10 @@ private:
 };
 
 
-
-class BufferStack {
-    std::stack<FrameBuffer*> buffers;
-    void push(const FrameBuffer* buffer);
-    void pop();
+class FrameBufferFloat {
+public:
+private:
+    GLuint object{};
 };
 
 

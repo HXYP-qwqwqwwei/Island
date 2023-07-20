@@ -43,6 +43,5 @@ void main() {
     mat3 TBN_inverse    = transpose(mat3(TBN));
     pLightInj_tanSpace  = TBN_inverse * (fPos - pointLightPosition);
     dLightInj_tanSpace  = normalize(TBN_inverse * directLightInjection);
-//    fragPos_tanSpace    = TBN_inverse * fPos;
     viewVec_tanSpace    = TBN_inverse * (viewPos - fPos);
 }

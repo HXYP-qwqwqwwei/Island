@@ -56,6 +56,7 @@ FrameBuffer::FrameBuffer(GLsizei width, GLsizei height, int mode, bool readable)
     bool colorMode = mode & COLOR;
     bool depthMode = mode & DEPTH;
     bool stencilMode = mode & STENCIL;
+    bool hdr_enabled = mode & HDR;
     int samples = MSAA_SAMPLES(mode);
     glGenFramebuffers(1, &this->object);
     glBindFramebuffer(GL_FRAMEBUFFER, this->object); // or GL_READ_FRAMEBUFFER / GL_DRAW_FRAMEBUFFER
@@ -64,15 +65,27 @@ FrameBuffer::FrameBuffer(GLsizei width, GLsizei height, int mode, bool readable)
     if (colorMode) {
         glGenTextures(1, &this->color);
         GLenum target;
+        GLenum type;
+        GLint format;
+        if (hdr_enabled) {
+            type = GL_FLOAT;
+            format = GL_RGB16F;
+        } else {
+            type = GL_UNSIGNED_BYTE;
+            format = GL_RGB;
+        }
+
+
         if (samples > 1) {  // MSAA
             target = GL_TEXTURE_2D_MULTISAMPLE;
             glBindTexture(target, this->color);
             // 最后一个参数表示MSAA过程中所有像素的子采样点的位置和个数都相同
-            glTexImage2DMultisample(target, samples, GL_SRGB, width, height, GL_TRUE);
+            glTexImage2DMultisample(target, samples, format, width, height, GL_TRUE);
+
         } else {
             target = GL_TEXTURE_2D;
             glBindTexture(target, this->color);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+            glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, GL_RGB, type, nullptr);
         }
         glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

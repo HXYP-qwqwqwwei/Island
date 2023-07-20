@@ -57,8 +57,8 @@ namespace textures {
     void loadDefaultTextures(const std::string& dir);
 }
 
-std::tuple<GLint, GLint> tex_format(int nrChannels);
-GLuint load_texture(const char* path, const std::string& directory, GLint warp = GL_REPEAT, GLint filter = GL_LINEAR, bool flipUV = true, bool sRGB = false);
+GLint tex_format(int nrChannels);
+GLuint load_texture(const char* path, const std::string& directory, GLint warp = GL_REPEAT, GLint filter = GL_LINEAR, bool flipUV = true);
 GLuint load_cube_map(std::initializer_list<std::string> paths, const std::string& directory, bool flipUV = false);
 Texture2D load_texture(const char* path, const std::string& directory, aiTextureType type, GLint warp = GL_REPEAT, GLint filter = GL_LINEAR, bool flipUV = true);
 

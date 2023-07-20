@@ -9,7 +9,8 @@ in vec3 dLightInj_tanSpace;
 in vec3 viewVec_tanSpace;
 in mat3 TBN;
 
-out vec4 fragColor;
+layout (location = 0) out vec4 fragColor;
+//layout (location = 1) out vec4 brightColor;
 
 struct PointLight {
     vec3 color;
@@ -52,6 +53,8 @@ void main() {
     vec2 fixedUV = parallaxFixedUV(view);
 
     vec4 texDiff = texture(texes.diffuse0,  fixedUV);
+    texDiff = vec4(pow(texDiff.rgb, vec3(2.2)), texDiff.a);     // Transfer to Linear Space
+
     vec4 texSpec = texture(texes.specular0, fixedUV);
     vec4 texRfle = texture(texes.reflect0,  fixedUV);
     vec3 texNorm = texture(texes.normals0,  fixedUV).rgb;
@@ -71,7 +74,7 @@ void main() {
     // point light
     vec3 inj_pLight     = pLightInj_tanSpace;
     float lightDis      = length(inj_pLight);
-    float attenuation   = 1.0 / (lightDis * pointLight.linear);   // at linear space
+    float attenuation   = 1.0 / (lightDis * lightDis * pointLight.linear);   // at linear space
     vec3 plightResult   = pointLight.color * attenuation;
     inj_pLight          = normalize(inj_pLight);
     vec3 diffuse_pLight = plightResult * texDiff.rgb * max(0.0f, dot(-inj_pLight, texNorm));
@@ -140,7 +143,7 @@ float pLightShadow(vec3 fPos, vec3 lightPos) {
     float currDepth = length(injection);
 
     // PCF
-    float bias = max(0.01 * (1.0 - dot(fNormal, -normalize(injection))), 0.0003);
+    float bias = max(0.04 * (1.0 - dot(fNormal, -normalize(injection))), 0.0003);
     float shadow = 0;
     for (int i = 0; i < 20; ++i) {
         float depth = texture(pointLight.shadowMap, injection + cubeSampleOffsets[i] * 0.005).r;

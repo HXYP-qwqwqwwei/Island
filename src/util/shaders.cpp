@@ -10,6 +10,7 @@ Shader* simpleShader;
 Shader* transparentShader;
 Shader* cutoutShader;
 Shader* screenShader;
+Shader* screenShaderHDR;
 Shader* skyShader;
 Shader* depthShader;
 Shader* depthCubeShader;
@@ -43,6 +44,12 @@ void compileShaders() {
     screenShader->loadShader("ScreenShader.vert", GL_VERTEX_SHADER);
     screenShader->loadShader("ScreenShader.frag", GL_FRAGMENT_SHADER);
     screenShader->link();
+
+    screenShaderHDR = new Shader();
+    screenShaderHDR->loadShader("ScreenShader.vert", GL_VERTEX_SHADER);
+    screenShaderHDR->loadShader("ScreenShaderHDR.frag", GL_FRAGMENT_SHADER);
+    screenShaderHDR->link();
+
 
     skyShader = new Shader();
     skyShader->loadShader("SkyShader.vert", GL_VERTEX_SHADER);

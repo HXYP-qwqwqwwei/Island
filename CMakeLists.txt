@@ -26,7 +26,7 @@ add_executable(
         src/util/render_util.cpp
         src/util/ClientWorld.cpp
         src/main.cpp
-)
+        src/util/world.cpp include/util/world.h)
 
 INCLUDE_DIRECTORIES(include)
 target_link_libraries(Island
