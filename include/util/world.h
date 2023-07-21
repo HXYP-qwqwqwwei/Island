@@ -10,19 +10,17 @@
 #include "Model.h"
 #include "render_util.h"
 #include "light_util.h"
+#include "glm/glm.hpp"
 
-struct ModelInfo {
-    int id;
-    std::vector<glm::mat4> transMatrices;
-
-    void addInstance(glm::mat4 transMtx);
-    void addInstance(std::initializer_list<glm::mat4> transMtx);
-};
+extern ModelManager MODEL_MANAGER;
 
 
 void InitWorld();
-void putModelInfo(RenderType type, const ModelInfo* modelInfo);
-void RenderWorld();
-void RenderWorldCube();
+void PutModelInfo(RenderType type, const ModelInfo* modelInfo);
+void Flush();
+void RenderWorld(Camera& camera, FrameBuffer& frame);
+void RenderShadow();
+uint CreatePointLight(glm::vec3 pos, glm::vec3 color, GLsizei shadowRes, float linear = 1.0f, float zNear = 0.1f, float zFar = 25.0f);
+void SetDirectLight(glm::vec3 injection, glm::vec3 color, GLsizei shadowRes, glm::vec3 ambient = glm::vec3(0.01f));
 
 #endif //ISLAND_WORLD_H

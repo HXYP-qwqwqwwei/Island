@@ -30,6 +30,7 @@ void setupDirectionalLight(const Shader* shader, const DirectionalLight& light) 
     shader->uniformVec3("directLightInjection", light.injection);
     shader->uniformVec3("directLight.color", light.color);
     shader->uniformVec3("directLight.ambient", light.ambient);
+    shader->uniformMatrix4fv(Shader::LIGHT_SPACE_MATRIX, light.spaceMtx);
 
     glActiveTexture(GL_TEXTURE30);
     glBindTexture(GL_TEXTURE_2D, light.shadow);
@@ -43,12 +44,12 @@ void setupLight(const Shader* shader, const Light& light) {
     }
 }
 
-Light::Light(DirectionalLight dLight, std::vector<PointLight> pLights) {
+Light::Light(const DirectionalLight& dLight, const std::vector<PointLight*>& pLights) {
     this->dLight = dLight;
     int i;
     size_t len = min(pLights.size(), MAX_PLIGHT_AMOUNT);
     for (i = 0; i < len; ++i) {
-        this->pLights[i] = pLights[i];
+        this->pLights[i] = *pLights[i];
     }
     for (; i < MAX_PLIGHT_AMOUNT; ++i) {
         this->pLights[i] = EMPTY_POINT_LIGHT;

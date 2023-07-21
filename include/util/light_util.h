@@ -8,6 +8,7 @@
 #include "glm/glm.hpp"
 #include "shaders.h"
 #include "defs.h"
+#include "buffer_util.h"
 
 #define MAX_PLIGHT_AMOUNT 4
 
@@ -23,7 +24,8 @@ struct PointLight {
 struct DirectionalLight {
     glm::vec3 color = glm::vec3(0.0f);
     glm::vec3 injection = glm::vec3(1.0f, 0, 0);
-    glm::vec3 ambient = glm::vec3(0.1);
+    glm::vec3 ambient = glm::vec3(0.1f);
+    glm::mat4 spaceMtx = glm::mat4(1.0f);
     GLuint shadow;
 };
 
@@ -35,7 +37,7 @@ struct Light {
     DirectionalLight dLight;
     PointLight pLights[MAX_PLIGHT_AMOUNT];
 
-    Light(DirectionalLight dLight, std::vector<PointLight> pLights);
+    Light(const DirectionalLight& dLight, const std::vector<PointLight*>& pLights);
 };
 
 

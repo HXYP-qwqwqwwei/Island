@@ -17,8 +17,8 @@ struct CoordAxis {
 };
 
 
-extern GLsizei gameScrWidth;
-extern GLsizei gameScrHeight;
+extern GLsizei GameScrWidth;
+extern GLsizei GameScrHeight;
 extern glm::vec3 initPos;
 extern glm::vec3 cameraMov;
 extern float gameSPF;

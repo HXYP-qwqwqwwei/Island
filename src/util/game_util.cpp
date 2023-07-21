@@ -4,8 +4,8 @@
 
 #include "util/game_util.h"
 
-GLsizei gameScrWidth = 1000;
-GLsizei gameScrHeight = 1000;
+GLsizei GameScrWidth = 1000;
+GLsizei GameScrHeight = 1000;
 
 glm::vec3 initPos = glm::vec3(0, 0, 3);
 glm::vec3 cameraMov = glm::vec3(0, 0, 0);
@@ -14,13 +14,13 @@ float playerPitch;
 float playerYaw;
 
 
-#define SCR_CENTER_X (static_cast<double>(gameScrWidth) / 2)
-#define SCR_CENTER_Y (static_cast<double>(gameScrHeight) / 2)
+#define SCR_CENTER_X (static_cast<double>(GameScrWidth) / 2)
+#define SCR_CENTER_Y (static_cast<double>(GameScrHeight) / 2)
 
 GLFWwindow* createWindow(GLsizei width, GLsizei height) {
-    gameScrWidth = width;
-    gameScrHeight = height;
-    GLFWwindow* window = glfwCreateWindow(gameScrWidth, gameScrHeight, "Island", nullptr, nullptr);
+    GameScrWidth = width;
+    GameScrHeight = height;
+    GLFWwindow* window = glfwCreateWindow(GameScrWidth, GameScrHeight, "Island", nullptr, nullptr);
     if (window == nullptr) {
         std::cout << "Failed to create GLFW window\n";
         glfwTerminate();
@@ -67,8 +67,8 @@ void processInput(GLFWwindow* window) {
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
-    gameScrWidth = width;
-    gameScrHeight = height;
+    GameScrWidth = width;
+    GameScrHeight = height;
 }
 
 

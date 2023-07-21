@@ -53,7 +53,7 @@ size_t Buffer::getSize() const {
 
 
 FrameBuffer::FrameBuffer(GLsizei width, GLsizei height, int mode, bool readable): width(width), height(height), mode(mode), readable(readable) {
-    bool colorMode = mode & COLOR;
+    bool colorMode = mode & (COLOR_BUFFER | HDR);
     bool depthMode = mode & DEPTH;
     bool stencilMode = mode & STENCIL;
     bool hdr_enabled = mode & HDR;
@@ -123,7 +123,7 @@ FrameBuffer::FrameBuffer(GLsizei width, GLsizei height, int mode, bool readable)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, this->depth_stencil, 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, this->depth_stencil, 0);
 
         } else {    // 不需要读取缓冲，直接使用RBO
             glGenRenderbuffers(1, &this->rbo);
@@ -186,10 +186,10 @@ GLuint FrameBuffer::getDepthStencilTex() const {
     return 0;
 }
 
-FrameBufferCube::FrameBufferCube(GLsizei length, int mode) {
+FrameBufferCube::FrameBufferCube(GLsizei length, int mode): length(length) {
     glGenFramebuffers(1, &this->object);
     glBindFramebuffer(GL_FRAMEBUFFER, this->object);
-    if (mode & COLOR) {
+    if (mode & COLOR_BUFFER) {
         glGenTextures(1, &this->colorCube);
         glBindTexture(GL_TEXTURE_CUBE_MAP, this->colorCube);
         for (int i = 0; i < 6; ++i) {

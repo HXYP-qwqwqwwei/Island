@@ -35,7 +35,6 @@ void textures::loadDefaultTextures(const std::string& dir) {
             dir
     );
 
-    std::cout << EMPTY_SHADOW << '\n';
     EMPTY_POINT_LIGHT.shadow = EMPTY_SHADOW;
     EMPTY_DIRECTIONAL_LIGHT.shadow = EMPTY_SHADOW;
 

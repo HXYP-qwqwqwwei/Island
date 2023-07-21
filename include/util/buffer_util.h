@@ -9,7 +9,7 @@
 #include "glad/glad.h"
 #include "defs.h"
 
-#define COLOR 0x1       // 0
+#define COLOR_BUFFER 0x1       // 0
 #define DEPTH 0x2       // 1
 #define STENCIL 0x4     // 2
 #define MSAA(S) ((S - 1) << 3)  // 3 ~ 6
@@ -43,10 +43,10 @@ public:
     void enableMSAA(int mode, int samples);
     [[nodiscard]] GLuint getDepthStencilTex() const;
     [[nodiscard]] GLuint getTexture() const;
+    const GLsizei width;
+    const GLsizei height;
 private:
     const int mode;
-    GLsizei width;
-    GLsizei height;
     FrameBuffer* msBuffer = nullptr;    // multisampling buffer
 
     GLuint object{};
@@ -62,11 +62,12 @@ public:
     [[nodiscard]] GLuint getDepthCubeMap() const;
     [[nodiscard]] GLuint getTextureCubeTex() const;
     void bind() const;
-
+    const GLsizei length;
 private:
     GLuint object{};
     GLuint colorCube{};
     GLuint depthCube{};
+
 };
 
 

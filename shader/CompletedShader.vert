@@ -22,7 +22,7 @@ out mat3 TBN;
 uniform mat4 lightSpaceMtx;
 uniform vec3 viewPos;
 uniform vec3 directLightInjection;
-//uniform vec3 pointLightPositions[4];
+
 
 struct PointLight {
     vec3 pos;

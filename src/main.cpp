@@ -12,8 +12,8 @@
 #include "util/texture_util.h"
 #include "util/Screen.h"
 #include "util/buffer_util.h"
-#include "util/light_util.h"
 #include "util/render_util.h"
+#include "util/world.h"
 
 using GLObject = GLuint;
 using GLLoc = GLint;
@@ -45,7 +45,7 @@ int main() {
     // 在开始渲染前，需要告诉OpenGL窗口的坐标和大小
     // 因为OpenGL使用的任何坐标范围是[-1, +1]，通过指定大小后就可以将其映射到[0, W]和[0, H]
     // 例如(-0.5, 0.5)将会被映射到屏幕的(W/4, 3H/4)
-    glViewport(0, 0, gameScrWidth, gameScrHeight);
+    glViewport(0, 0, GameScrWidth, GameScrHeight);
 
 
     // Hide cursor
@@ -80,7 +80,6 @@ int main() {
 
     // Models
     Model nanoSuitModel("resources/nanosuit/nanosuit.obj");
-    ModelManager modelManager;
     {
         auto cube           = [=]() -> Model {return shapes::Cube(1, {cubeDiff, cubeRefl, cubeSpec, cubeNorm});};
         auto lightCube      = [=]() -> Model {return shapes::Cube(0.2f);};
@@ -91,70 +90,39 @@ int main() {
             return shapes::Cube(1, {toyBoxDiff, toyBoxNorm, toyBoxPara, toyBoxSpec});
         };
 
-        modelManager.put(cube, "cube");
-        modelManager.put(woodenFloor, "wooden_floor");
-        modelManager.put(lightCube, "light_cube");
-        modelManager.put(rgbWindow, "rgb_window");
-        modelManager.put(grass, "grass");
-        modelManager.put(toyBox, "toy_box");
+        MODEL_MANAGER.put(cube, "cube");
+        MODEL_MANAGER.put(woodenFloor, "wooden_floor");
+        MODEL_MANAGER.put(lightCube, "light_cube");
+        MODEL_MANAGER.put(rgbWindow, "rgb_window");
+        MODEL_MANAGER.put(grass, "grass");
+        MODEL_MANAGER.put(toyBox, "toy_box");
     }
 
     // Sky box
-//    SkyBox* skyBox  = shapes::SkyBoxCube(skyBoxTex);
-
-
-    glEnable(GL_STENCIL_TEST);
-    glEnable(GL_BLEND);
-    glEnable(GL_CULL_FACE);
-    glBlendEquation(GL_FUNC_ADD);   // default
+    SkyBox* skyBox  = shapes::SkyBoxCube(skyBoxTex);
 
     // Screen
 #ifdef ISLAND_ENABLE_HDR
-    FrameBuffer frameBuffer(gameScrWidth, gameScrHeight, COLOR | HDR);
-    frameBuffer.enableMSAA(COLOR | HDR | DEPTH | STENCIL, 4);
+    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight, HDR);
+    frameBuffer.enableMSAA(HDR | DEPTH | STENCIL, 4);
 #else
-    FrameBuffer frameBuffer(gameScrWidth, gameScrHeight, COLOR);
-    frameBuffer.enableMSAA(COLOR | DEPTH | STENCIL, 4);
+    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight, COLOR_BUFFER);
+    frameBuffer.enableMSAA(COLOR_BUFFER | DEPTH | STENCIL, 4);
 #endif
 
     Screen* screen  = shapes::ScreenRect({frameBuffer.getTexture()});
-
-    int shadowRes = 4096;
-    FrameBuffer directShadowMap(shadowRes, shadowRes, DEPTH, true);
-    FrameBufferCube pointShadowMap(shadowRes, COLOR | DEPTH);
-
-    // Uniform buffer
-    Buffer pvMatBuffer(GL_UNIFORM_BUFFER);
-    pvMatBuffer.putData(SZ_MAT4F * 2, nullptr, GL_STATIC_DRAW);
-    pvMatBuffer.bindBufferBase(0);
-
-
-//    glm::vec3 pLight(1, 1, 1);
-    PointLight pLight {
-            glm::vec3(100.0f),
-            glm::vec3(-3, 1, -3.),
-            1.0, 0.02, 25.0,
-            pointShadowMap.getDepthCubeMap()
-    };
-
-    DirectionalLight dLight {
-            glm::vec3(.0f),
-            glm::vec3(-1, -2, -1.5),
-            glm::vec3(.01f),
-            directShadowMap.getDepthStencilTex()
-    };
-
-    Light light(dLight, {pLight});
-
-
-    Camera dLightCamera(dLight.injection * -3.0f , -glm::normalize(dLight.injection));
-    glm::mat4 dLightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 100.0f);
-    glm::mat4 dLightView = dLightCamera.getView();
 
     double t0 = glfwGetTime();
     Camera camera(initPos);
     GLuint envMap = textures::EMPTY_ENV_MAP;
 
+    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(.0f), 4096);
+    CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(10.0f), 4096);
+    CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(10.0f, 0, 0), 4096);
+    CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 10.0f, 0), 4096);
+    CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 10.0f), 4096);
+
+    InitWorld();
     glGetError();
     // render loop
     while (!glfwWindowShouldClose(window)) {
@@ -175,140 +143,19 @@ int main() {
         // camera
         camera.move(cameraMov);
         camera.eulerAngle(playerPitch, playerYaw);
-        const glm::mat4 view = camera.getView();
-        const glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float) gameScrWidth / (float)gameScrHeight, 0.1f, 100.0f);
-        const Model* model;
-        glm::mat4 lightSpaceMtx;
-
-        // uniform buffer -- projection and view matrix
-        pvMatBuffer.bind();
-        // set view and projection
-        pvMatBuffer.subData(0, SZ_MAT4F, glm::value_ptr(view));
-        pvMatBuffer.subData(SZ_MAT4F, SZ_MAT4F, glm::value_ptr(proj));
-
-        /*================ Shadow map ================*/
-        glViewport(0, 0, shadowRes, shadowRes);
-        directShadowMap.bind();
-
-        glEnable(GL_DEPTH_TEST);
-        glClear(GL_DEPTH_BUFFER_BIT);
-        {
-            depthShader->use();
-            depthShader->uniformMatrix4fv(Shader::VIEW, dLightView);
-            depthShader->uniformMatrix4fv(Shader::PROJECTION, dLightProj);
-            depthShader->uniformMatrix4fv(Shader::MODEL, glm::translate(glm::mat4(1.0), glm::vec3(0, 0, -5.0)));
-            lightSpaceMtx = dLightProj * dLightView;
-
-            // draw
-            modelMtx = glm::mat4(1.0f);
-            model = modelManager.getModel("cube");
-            render(model, SHADOW, camera, modelMtx, light);
-
-            modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
-            render(model, SHADOW, camera, modelMtx, light);
-
-            model = modelManager.getModel("toy_box");
-            modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
-            render(model, SHADOW, camera, modelMtx, light);
 
 
-            // two grass
-            modelMtx = glm::translate(glm::mat4(1), glm::vec3(-1, 0, 0.5f));
-            model = modelManager.getModel("grass");
-            render(model, SHADOW, camera, modelMtx, light);
+        /*================ Decorate World Objects ================*/
+        modelMtx = glm::mat4(1.0);
+        ModelInfo boxes = MODEL_MANAGER.createInfo("cube");
+        boxes.addInstance(modelMtx);
+        boxes.addInstance(glm::translate(modelMtx, glm::vec3(-1, 0, -2)));
+        PutModelInfo(SOLID, &boxes);
 
-            modelMtx = glm::translate(modelMtx, glm::vec3(2, 0, 0));
-            render(model, SHADOW, camera, modelMtx, light);
-        }
+        ModelInfo toyBoxes = MODEL_MANAGER.createInfo("toy_box");
+        toyBoxes.addInstance(glm::translate(modelMtx, glm::vec3(-2, 0, -4)));
+        PutModelInfo(SOLID, &toyBoxes);
 
-        directShadowMap.unbind();
-
-
-        pointShadowMap.bind();
-        glEnable(GL_DEPTH_TEST);
-        glClear(GL_DEPTH_BUFFER_BIT);
-        {
-            modelMtx = glm::mat4(1.0f);
-            model = modelManager.getModel("cube");
-            renderPointShadow(model, SHADOW, pLight.pos, modelMtx, pLight);
-
-            modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
-            renderPointShadow(model, SHADOW, pLight.pos, modelMtx, pLight);
-
-            model = modelManager.getModel("toy_box");
-            modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
-            renderPointShadow(model, SHADOW, pLight.pos, modelMtx, pLight);
-
-
-            // two grass
-            modelMtx = glm::translate(glm::mat4(1), glm::vec3(-1, 0, 0.5f));
-            model = modelManager.getModel("grass");
-            renderPointShadow(model, SHADOW, pLight.pos, modelMtx, pLight);
-
-            modelMtx = glm::translate(modelMtx, glm::vec3(2, 0, 0));
-            renderPointShadow(model, SHADOW, pLight.pos, modelMtx, pLight);
-        }
-
-        glViewport(0, 0, gameScrWidth, gameScrHeight);
-
-
-        frameBuffer.bind();
-
-        // 每当glClear被调用，color buffer都将被填充为glClearColor中配置的颜色
-        glClearColor(dLight.ambient.r, dLight.ambient.g, dLight.ambient.b, 1.0F);
-        // Depth test
-//        glDepthMask(GL_FALSE);  // Read-Only
-        glDepthFunc(GL_LESS);   // Default
-        // Stencil test
-        glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);  // when a fragment passed ST, replace its value
-        // Blend
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        // 清除上一帧的颜色/深度测试/模板测试缓冲
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-        glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GL_LEQUAL);
-
-
-
-        /*================ solid items ================*/
-
-//        solidShader.uniformVec3("spotLight.color", pLight);
-//        solidShader.uniformVec3("spotLight.pos", camera.getPos());
-//        solidShader.uniformVec3("spotLight.direction", camera.getFocal());
-//        solidShader.uniformFloat("spotLight.cutOff", glm::cos(glm::radians(15.0f)));
-
-
-        // open stencil test
-//        glStencilFunc(GL_ALWAYS, 1, 0xFF);
-//        glStencilMask(0xFF);
-
-//        cube->setEnvironmentMap(emptyEnvMap);
-//        nanoSuitModel.Draw(solidShader);
-//        cube->draw(*solidShader);
-        solidShader->use();
-        solidShader->setEnvironmentMap(envMap);
-        solidShader->uniformMatrix4fv("lightSpaceMtx", lightSpaceMtx);
-
-        modelMtx = glm::mat4(1.0f);
-        model = modelManager.getModel("cube");
-        render(model, SOLID, camera, modelMtx, light);
-
-        modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
-        render(model, SOLID, camera, modelMtx, light);
-
-        model = modelManager.getModel("toy_box");
-        modelMtx = glm::translate(modelMtx, glm::vec3(-1, 0, -2));
-        render(model, SOLID, camera, modelMtx, light);
-
-
-        // close stencil test
-//        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);  // whe
-//        glStencilMask(0x00);    // Disable writing
-
-
-        /*================ instanced infinite woodenFloor ================*/
         const int range = 8;
         const int amount = (2 * range + 1) * (2 * range + 1);
         std::vector<glm::mat4> floorMats;
@@ -326,61 +173,20 @@ int main() {
                 floorMats.push_back(modelMtx);
             }
         }
-        solidShader->use();
-        solidShader->uniformMatrix4fv("lightSpaceMtx", lightSpaceMtx);
-        model = modelManager.getModel("wooden_floor");
-        render(model, SOLID, camera, &floorMats[0], floorMats.size(), light);
+        ModelInfo floors = MODEL_MANAGER.createInfo("wooden_floor");
+        floors.addInstance(floorMats);
+        PutModelInfo(SOLID, &floors);
 
 
-        /*================ point light ================*/
-        simpleShader->use();
-        simpleShader->uniformVec3("color", pLight.color);
-        modelMtx = glm::mat4(1.0f);
-        modelMtx = glm::translate(modelMtx, pLight.pos);
-        model = modelManager.getModel("light_cube");
-        render(model, PURE, camera, modelMtx, light);
+        ModelInfo grasses = MODEL_MANAGER.createInfo("grass");
+        modelMtx = glm::mat4(1);
+        grasses.addInstance({
+                glm::translate(modelMtx, glm::vec3(-1, 0, 0.5f)),
+                glm::translate(modelMtx, glm::vec3(1, 0, 0.5f))
+        });
+        PutModelInfo(CUTOUT, &grasses);
 
-
-        /*================ sky box ================*/
-//        skyShader.use();
-//        skyShader.uniformMatrix4fv(Shader::PROJECTION, proj);
-//        skyShader.uniformMatrix4fv("view", glm::mat4(glm::mat3(view)));
-//        skyBox->draw(skyShader);
-
-
-        /*================ cutout items ================*/
-        // two grass
-        cutoutShader->use();
-        cutoutShader->setEnvironmentMap(envMap);
-        modelMtx = glm::translate(glm::mat4(1), glm::vec3(-1, 0, 0.5f));
-        model = modelManager.getModel("grass");
-        render(model, CUTOUT, camera, modelMtx, light);
-
-        modelMtx = glm::translate(modelMtx, glm::vec3(2, 0, 0));
-        render(model, CUTOUT, camera, modelMtx, light);
-
-
-
-        /*================ draw outline (result from stencil test) ================*/
-//        glDisable(GL_DEPTH_TEST);
-//        simpleShader.use();
-//        simpleShader.uniformVec3("viewPos", camera.getPos());
-//        simpleShader.uniformMatrix4fv(Shader::PROJECTION, proj);
-//        simpleShader.uniformMatrix4fv("view", view);
-//
-//        modelMtx = glm::scale(glm::mat4(1), glm::vec3(1.1));
-//        simpleShader.uniformMatrix4fv(Shader::MODEL, modelMtx);
-//        simpleShader.uniformVec3("color", glm::vec3(1, 0, 1));
-//        cube->draw(simpleShader);
-//        glStencilMask(0xFF);
-//        glEnable(GL_DEPTH_TEST);
-
-
-        /*================ Transparent: two rgbWindows ================*/
-        transparentShader->use();
-        setupLight(transparentShader, light);
-        transparentShader->uniformVec3("viewPos", camera.getPos());
-
+        ModelInfo rgb_windows = MODEL_MANAGER.createInfo("rgb_window");
         glm::vec3 poses[3];
         poses[0] = glm::vec3(-2, 0, 2.5f);
         poses[1] = glm::vec3(1, 0, 1.5f);
@@ -389,15 +195,26 @@ int main() {
             return glm::distance(camera.getPos(), v1) > glm::distance(camera.getPos(), v2);
         };
         std::sort(poses, poses+3, cmp);
-        model = modelManager.getModel("rgb_window");
-        for (const auto& pos : poses) {
-            glm::mat4 m(1);
-            render(model, TRANSPARENT, camera, glm::translate(m, pos), light);
-        }
+
+        rgb_windows.addInstance({
+                glm::translate(modelMtx, poses[0]),
+                glm::translate(modelMtx, poses[1]),
+                glm::translate(modelMtx, poses[2])
+        });
+        PutModelInfo(TRANSPARENT, &rgb_windows);
 
 
+        RenderShadow();
+        RenderWorld(camera, frameBuffer);
+        Flush();
+
+
+        /*================ sky box ================*/
+////        skyShader.use();
+////        skyShader.uniformMatrix4fv(Shader::PROJECTION, proj);
+////        skyShader.uniformMatrix4fv("view", glm::mat4(glm::mat3(view)));
+////        skyBox->draw(skyShader);
         /*================ Post-Production ================*/
-        frameBuffer.unbind();
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         glDisable(GL_DEPTH_TEST);
