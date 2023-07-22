@@ -237,7 +237,7 @@ int main() {
         pingPongBuffer[0]->bind();
         bright->draw(*GaussianBlurShader);
         int cycles = 2 * gaussianLevels - 1;
-        for (int i = 0; i < gaussianLevels; ++i) {
+        for (int i = 0; i < cycles; ++i) {
             horizontal = !horizontal;
             pingPongBuffer[horizontal]->bind();
             GaussianBlurShader->uniformBool(Shader::GAUSSIAN_HORIZONTAL, horizontal);
