@@ -74,7 +74,7 @@ Model shapes::Rectangle(float w, float h, TexList<Texture2D> textures, float max
 //}
 
 
-Screen* shapes::ScreenRect(std::initializer_list<GLuint> tex) {
+Screen* shapes::ScreenRect(TexList<GLuint> tex) {
     std::vector<GLuint> textures(tex);
     std::vector<Vertex2D> vertices{
             {glm::vec2(1, 1), glm::vec2(1, 1)},

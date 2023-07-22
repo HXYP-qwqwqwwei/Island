@@ -5,67 +5,75 @@
 #include "util/shaders.h"
 #include "assimp/material.h"
 
-Shader* solidShader;
-Shader* simpleShader;
-Shader* transparentShader;
-Shader* cutoutShader;
-Shader* screenShader;
-Shader* screenShaderHDR;
-Shader* skyShader;
-Shader* depthShader;
-Shader* depthCubeShader;
+Shader* SolidShader;
+Shader* SimpleShader;
+Shader* TransparentShader;
+Shader* CutoutShader;
+Shader* ScreenShader;
+Shader* ScreenShaderHDR;
+Shader* SkyShader;
+Shader* DepthShader;
+Shader* DepthCubeShader;
 
+Shader* GaussianBlurShader;
 
 
 
 void compileShaders() {
-    solidShader = new Shader();
-    solidShader->loadShader("CompletedShader.vert", GL_VERTEX_SHADER);
-    solidShader->loadShader("SolidShader.frag", GL_FRAGMENT_SHADER);
-    solidShader->link();
+    SolidShader = new Shader();
+    SolidShader->loadShader("CompletedShader.vert", GL_VERTEX_SHADER);
+    SolidShader->loadShader("SolidShader.frag", GL_FRAGMENT_SHADER);
+    SolidShader->link();
 
 
-    simpleShader = new Shader();
-    simpleShader->loadShader("CompletedShader.vert", GL_VERTEX_SHADER);
-    simpleShader->loadShader("SimpleShader.frag", GL_FRAGMENT_SHADER);
-    simpleShader->link();
+    SimpleShader = new Shader();
+    SimpleShader->loadShader("CompletedShader.vert", GL_VERTEX_SHADER);
+    SimpleShader->loadShader("SimpleShader.frag", GL_FRAGMENT_SHADER);
+    SimpleShader->link();
 
-    transparentShader = new Shader();
-    transparentShader->loadShader("CompletedShader.vert", GL_VERTEX_SHADER);
-    transparentShader->loadShader("TransparentShader.frag", GL_FRAGMENT_SHADER);
-    transparentShader->link();
+    TransparentShader = new Shader();
+    TransparentShader->loadShader("CompletedShader.vert", GL_VERTEX_SHADER);
+    TransparentShader->loadShader("TransparentShader.frag", GL_FRAGMENT_SHADER);
+    TransparentShader->link();
 
-    cutoutShader = new Shader();
-    cutoutShader->loadShader("CompletedShader.vert", GL_VERTEX_SHADER);
-    cutoutShader->loadShader("CutoutShader.frag", GL_FRAGMENT_SHADER);
-    cutoutShader->link();
+    CutoutShader = new Shader();
+    CutoutShader->loadShader("CompletedShader.vert", GL_VERTEX_SHADER);
+    CutoutShader->loadShader("CutoutShader.frag", GL_FRAGMENT_SHADER);
+    CutoutShader->link();
 
-    screenShader = new Shader();
-    screenShader->loadShader("ScreenShader.vert", GL_VERTEX_SHADER);
-    screenShader->loadShader("ScreenShader.frag", GL_FRAGMENT_SHADER);
-    screenShader->link();
+    ScreenShader = new Shader();
+    ScreenShader->loadShader("ScreenShader.vert", GL_VERTEX_SHADER);
+    ScreenShader->loadShader("ScreenShader.frag", GL_FRAGMENT_SHADER);
+    ScreenShader->link();
 
-    screenShaderHDR = new Shader();
-    screenShaderHDR->loadShader("ScreenShader.vert", GL_VERTEX_SHADER);
-    screenShaderHDR->loadShader("ScreenShaderHDR.frag", GL_FRAGMENT_SHADER);
-    screenShaderHDR->link();
+    ScreenShaderHDR = new Shader();
+    ScreenShaderHDR->loadShader("ScreenShader.vert", GL_VERTEX_SHADER);
+    ScreenShaderHDR->loadShader("ScreenShaderHDR.frag", GL_FRAGMENT_SHADER);
+    ScreenShaderHDR->link();
 
 
-    skyShader = new Shader();
-    skyShader->loadShader("SkyShader.vert", GL_VERTEX_SHADER);
-    skyShader->loadShader("SkyShader.frag", GL_FRAGMENT_SHADER);
-    skyShader->link();
+    SkyShader = new Shader();
+    SkyShader->loadShader("SkyShader.vert", GL_VERTEX_SHADER);
+    SkyShader->loadShader("SkyShader.frag", GL_FRAGMENT_SHADER);
+    SkyShader->link();
 
-    depthShader = new Shader();
-    depthShader->loadShader("DepthShader.vert", GL_VERTEX_SHADER);
-    depthShader->loadShader("DepthShader.frag", GL_FRAGMENT_SHADER);
-    depthShader->link();
+    DepthShader = new Shader();
+    DepthShader->loadShader("DepthShader.vert", GL_VERTEX_SHADER);
+    DepthShader->loadShader("DepthShader.frag", GL_FRAGMENT_SHADER);
+    DepthShader->link();
 
-    depthCubeShader = new Shader();
-    depthCubeShader->loadShader("DepthCubeShader.vert", GL_VERTEX_SHADER);
-    depthCubeShader->loadShader("CubeShader.geom", GL_GEOMETRY_SHADER);
-    depthCubeShader->loadShader("DepthCubeShader.frag", GL_FRAGMENT_SHADER);
-    depthCubeShader->link();
+    DepthCubeShader = new Shader();
+    DepthCubeShader->loadShader("DepthCubeShader.vert", GL_VERTEX_SHADER);
+    DepthCubeShader->loadShader("CubeShader.geom", GL_GEOMETRY_SHADER);
+    DepthCubeShader->loadShader("DepthCubeShader.frag", GL_FRAGMENT_SHADER);
+    DepthCubeShader->link();
+
+
+    GaussianBlurShader = new Shader();
+    GaussianBlurShader->loadShader("ScreenShader.vert", GL_VERTEX_SHADER);
+    GaussianBlurShader->loadShader("GaussianBlur.frag", GL_FRAGMENT_SHADER);
+    GaussianBlurShader->link();
+
 }
 
 void Shader::compileShader(const std::string& source, GLObject& shaderObject, GLenum type) {
@@ -87,34 +95,34 @@ void Shader::compileShader(const std::string& source, GLObject& shaderObject, GL
 const Shader* selectShader(RenderType type) {
     switch (type) {
         case SOLID:
-            return solidShader;
+            return SolidShader;
         case CUTOUT:
-            return cutoutShader;
+            return CutoutShader;
         case TRANSPARENT:
-            return transparentShader;
+            return TransparentShader;
         case SCREEN:
-            return screenShader;
+            return ScreenShader;
         case SHADOW:
-            return depthShader;
+            return DepthShader;
         case PURE:
-            return simpleShader;
+            return SimpleShader;
     }
 }
 
 const Shader* selectCubeShader(RenderType type) {
     switch (type) {
         case SOLID:
-            return solidShader;
+            return SolidShader;
         case CUTOUT:
-            return cutoutShader;
+            return CutoutShader;
         case TRANSPARENT:
-            return transparentShader;
+            return TransparentShader;
         case SCREEN:
-            return screenShader;
+            return ScreenShader;
         case SHADOW:
-            return depthCubeShader;
+            return DepthCubeShader;
         case PURE:
-            return simpleShader;
+            return SimpleShader;
     }
 
 }
@@ -204,6 +212,11 @@ void Shader::uniformFloat(const std::string &name, float fv) const {
 void Shader::uniformInt(const std::string &name, int iv) const {
     GLLoc loc = glGetUniformLocation(shaderProgram, name.c_str());
     glUniform1iv(loc, 1, &iv);
+}
+
+void Shader::uniformBool(const std::string &name, bool bv) const {
+    GLLoc loc = glGetUniformLocation(shaderProgram, name.c_str());
+    glUniform1i(loc, bv);
 }
 
 void Shader::setDefaultTexture(aiTextureType type, GLuint tex, int idx) const {

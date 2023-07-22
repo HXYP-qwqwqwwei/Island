@@ -10,7 +10,7 @@ in vec3 viewVec_tanSpace;
 in mat3 TBN;
 
 layout (location = 0) out vec4 fragColor;
-//layout (location = 1) out vec4 brightColor;
+layout (location = 1) out vec4 brightColor;
 
 struct PointLight {
     vec3 pos;
@@ -107,6 +107,12 @@ void main() {
     vec3 reflection = texture(environment, TBN * refl).rgb * texRfle.rgb;
 
     fragColor = vec4(ambient + diffuse + specular + reflection, 1);
+
+
+    float brightness = dot(fragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+    if (brightness > 1.0) {
+        brightColor = fragColor;
+    } else brightColor = vec4(0, 0, 0, 1.0);
 }
 
 

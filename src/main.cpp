@@ -82,7 +82,7 @@ int main() {
     Model nanoSuitModel("resources/nanosuit/nanosuit.obj");
     {
         auto cube           = [=]() -> Model {return shapes::Cube(1, {cubeDiff, cubeRefl, cubeSpec, cubeNorm});};
-        auto lightCube      = [=]() -> Model {return shapes::Cube(0.2f);};
+        auto lightCube      = [=]() -> Model {return shapes::Cube(0.5f);};
         auto woodenFloor    = [=]() -> Model {return shapes::Rectangle(16, 16, {floorDiff, floorSpec, floorNorm});};
         auto rgbWindow      = [=]() -> Model {return shapes::Rectangle(1, 1, {windowTexDiff});};
         auto grass          = [=]() -> Model {return shapes::Rectangle(1, 1, {grassDiff});};
@@ -103,26 +103,36 @@ int main() {
 
     // Screen
 #ifdef ISLAND_ENABLE_HDR
-    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight, HDR);
-    frameBuffer.enableMSAA(HDR | DEPTH | STENCIL, 4);
+    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight, COLOR_HDR | MRT(2));
+    frameBuffer.enableMSAA(COLOR_HDR | MRT(2) | DEPTH | STENCIL, 4);
+    Screen* bright = shapes::ScreenRect({frameBuffer.getTexture(1)});
+    // For Bloom
+    FrameBuffer* pingPongBuffer[2];
+    Screen* blurredBright[2];
+    for (int i = 0; i < 2; ++i) {
+        pingPongBuffer[i] = new FrameBuffer(GameScrWidth, GameScrHeight, COLOR_HDR);
+        blurredBright[1 - i] = shapes::ScreenRect({pingPongBuffer[i]->getTexture()});
+    }
+
+    Screen* screen = shapes::ScreenRect({frameBuffer.getTexture(), pingPongBuffer[0]->getTexture()});
 #else
-    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight, COLOR_BUFFER);
-    frameBuffer.enableMSAA(COLOR_BUFFER | DEPTH | STENCIL, 4);
+    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight, COLOR_LDR);
+    frameBuffer.enableMSAA(COLOR_LDR | DEPTH | STENCIL, 4);
+    Screen* screen = shapes::ScreenRect({frameBuffer.getTexture()});
 #endif
 
-    Screen* screen  = shapes::ScreenRect({frameBuffer.getTexture()});
 
     double t0 = glfwGetTime();
     Camera camera(initPos);
     GLuint envMap = textures::EMPTY_ENV_MAP;
 
-    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(.0f), 4096);
-    CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(10.0f), 4096);
-    CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(10.0f, 0, 0), 4096);
-    CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 10.0f, 0), 4096);
-    CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 10.0f), 4096);
-
     InitWorld();
+    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(.0f), 4096);
+    CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(30.0f), 4096);
+    CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0), 4096);
+    CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 4096);
+    CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 4096);
+
     glGetError();
     // render loop
     while (!glfwWindowShouldClose(window)) {
@@ -210,21 +220,36 @@ int main() {
 
 
         /*================ sky box ================*/
-////        skyShader.use();
-////        skyShader.uniformMatrix4fv(Shader::PROJECTION, proj);
-////        skyShader.uniformMatrix4fv("view", glm::mat4(glm::mat3(view)));
-////        skyBox->draw(skyShader);
+////        SkyShader.use();
+////        SkyShader.uniformMatrix4fv(Shader::PROJECTION, proj);
+////        SkyShader.uniformMatrix4fv("view", glm::mat4(glm::mat3(view)));
+////        skyBox->draw(SkyShader);
         /*================ Post-Production ================*/
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         glDisable(GL_DEPTH_TEST);
 
 #ifdef ISLAND_ENABLE_HDR
-        screenShaderHDR->use();
-        screen->draw(*screenShaderHDR);
+        GaussianBlurShader->use();
+        int gaussianLevels = 10;
+        bool horizontal = false;
+        GaussianBlurShader->uniformBool(Shader::GAUSSIAN_HORIZONTAL, horizontal);
+        pingPongBuffer[0]->bind();
+        bright->draw(*GaussianBlurShader);
+        int cycles = 2 * gaussianLevels - 1;
+        for (int i = 0; i < gaussianLevels; ++i) {
+            horizontal = !horizontal;
+            pingPongBuffer[horizontal]->bind();
+            GaussianBlurShader->uniformBool(Shader::GAUSSIAN_HORIZONTAL, horizontal);
+            blurredBright[horizontal]->draw(*GaussianBlurShader);
+        }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        ScreenShaderHDR->use();
+        screen->draw(*ScreenShaderHDR);
 #else
-        screenShader->use();
-        screen->draw(*screenShader);
+        ScreenShader->use();
+        screen->draw(*ScreenShader);
 #endif
 
         glfwSwapBuffers(window);

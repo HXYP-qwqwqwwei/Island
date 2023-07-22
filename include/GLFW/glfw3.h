@@ -1924,7 +1924,7 @@ GLFWAPI const char* glfwGetVersionString(void);
  *
  *  This function returns and clears the [error code](@ref errors) of the last
  *  error that occurred on the calling thread, and optionally a UTF-8 encoded
- *  human-readable description of it.  If no error has occurred since the last
+ *  human-depthStencilReadable description of it.  If no error has occurred since the last
  *  call, it returns @ref GLFW_NO_ERROR (zero) and the description pointer is
  *  set to `NULL`.
  *
@@ -1954,7 +1954,7 @@ GLFWAPI int glfwGetError(const char** description);
 /*! @brief Sets the error callback.
  *
  *  This function sets the error callback, which is called with an error code
- *  and a human-readable description each time a GLFW error occurs.
+ *  and a human-depthStencilReadable description each time a GLFW error occurs.
  *
  *  The error code is set before the callback is called.  Calling @ref
  *  glfwGetError from the error callback will return the same value as the error
@@ -2174,7 +2174,7 @@ GLFWAPI void glfwGetMonitorContentScale(GLFWmonitor* monitor, float* xscale, flo
 
 /*! @brief Returns the name of the specified monitor.
  *
- *  This function returns a human-readable name, encoded as UTF-8, of the
+ *  This function returns a human-depthStencilReadable name, encoded as UTF-8, of the
  *  specified monitor.  The name typically reflects the make and model of the
  *  monitor and is not guaranteed to be unique among the connected monitors.
  *
@@ -2281,7 +2281,7 @@ GLFWAPI GLFWmonitorfun glfwSetMonitorCallback(GLFWmonitorfun callback);
 /*! @brief Returns the available video modes for the specified monitor.
  *
  *  This function returns an array of all video modes supported by the specified
- *  monitor.  The returned array is sorted in ascending order, first by color
+ *  monitor.  The returned array is sorted in ascending order, first by colors
  *  bit depth (the sum of all channel depths), then by resolution area (the
  *  product of width and height), then resolution width and finally by refresh
  *  rate.
@@ -5215,9 +5215,9 @@ GLFWAPI GLFWjoystickfun glfwSetJoystickCallback(GLFWjoystickfun callback);
  */
 GLFWAPI int glfwUpdateGamepadMappings(const char* string);
 
-/*! @brief Returns the human-readable gamepad name for the specified joystick.
+/*! @brief Returns the human-depthStencilReadable gamepad name for the specified joystick.
  *
- *  This function returns the human-readable name of the gamepad from the
+ *  This function returns the human-depthStencilReadable name of the gamepad from the
  *  gamepad mapping assigned to the specified joystick.
  *
  *  If the specified joystick is not present or does not have a gamepad mapping

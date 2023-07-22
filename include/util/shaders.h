@@ -51,6 +51,7 @@ public:
     void uniformVec4(const std::string& name, const glm::vec4& vec) const;
     void uniformFloat(const std::string& name, float fv) const;
     void uniformInt(const std::string& name, int iv) const;
+    void uniformBool(const std::string& name, bool bv) const;
     void setDefaultTexture(aiTextureType type, GLuint tex, int idx) const;
     void setEnvironmentMap(GLuint envMap) const;
 
@@ -58,7 +59,8 @@ public:
     static constexpr const char MODEL[] = "model";
     static constexpr const char LIGHT_SPACE_MATRIX[] = "lightSpaceMatrix";
     static constexpr const char VIEW_POS[] = "viewPos";
-    static constexpr const char COLOR[] = "color";
+    static constexpr const char COLOR[] = "colors";
+    static constexpr const char GAUSSIAN_HORIZONTAL[] = "horizontal";
     static constexpr const char SHININESS[] = "texes.shininess";
     static constexpr const char TEXTURES[] = "texes.";
     static constexpr const char ENVIRONMENT_MAP[] = "environment";
@@ -76,15 +78,17 @@ public:
 };
 
 
-extern Shader* solidShader;
-extern Shader* simpleShader;
-extern Shader* transparentShader;
-extern Shader* cutoutShader;
-extern Shader* screenShader;
-extern Shader* screenShaderHDR;
-extern Shader* skyShader;
-extern Shader* depthShader;
-extern Shader* depthCubeShader;
+extern Shader* SolidShader;
+extern Shader* SimpleShader;
+extern Shader* TransparentShader;
+extern Shader* CutoutShader;
+extern Shader* ScreenShader;
+extern Shader* ScreenShaderHDR;
+extern Shader* SkyShader;
+extern Shader* DepthShader;
+extern Shader* DepthCubeShader;
+
+extern Shader* GaussianBlurShader;
 
 
 void compileShaders();

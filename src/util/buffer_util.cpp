@@ -52,48 +52,57 @@ size_t Buffer::getSize() const {
 }
 
 
-FrameBuffer::FrameBuffer(GLsizei width, GLsizei height, int mode, bool readable): width(width), height(height), mode(mode), readable(readable) {
-    bool colorMode = mode & (COLOR_BUFFER | HDR);
+FrameBuffer::FrameBuffer(GLsizei width, GLsizei height, int mode, bool depthStencilReadable): width(width), height(height), mode(mode), depthStencilReadable(depthStencilReadable) {
+    bool colorMode = mode & (COLOR_LDR | COLOR_HDR);
     bool depthMode = mode & DEPTH;
     bool stencilMode = mode & STENCIL;
-    bool hdr_enabled = mode & HDR;
+    bool hdr_enabled = mode & COLOR_HDR;
     int samples = MSAA_SAMPLES(mode);
     glGenFramebuffers(1, &this->object);
     glBindFramebuffer(GL_FRAMEBUFFER, this->object); // or GL_READ_FRAMEBUFFER / GL_DRAW_FRAMEBUFFER
 
-    /*================ color ================*/
+    /*================ colors ================*/
     if (colorMode) {
-        glGenTextures(1, &this->color);
+        int n = MRT_TARGETS(mode);
+        auto* textures = new GLuint[n];
+
         GLenum target;
         GLenum type;
         GLint format;
         if (hdr_enabled) {
-            type = GL_FLOAT;
-            format = GL_RGB16F;
+            type    = GL_FLOAT;
+            format  = GL_RGB16F;
         } else {
-            type = GL_UNSIGNED_BYTE;
-            format = GL_RGB;
+            type    = GL_UNSIGNED_BYTE;
+            format  = GL_RGB;
         }
 
+        glGenTextures(n, textures);
+        for (int i = 0; i < n; ++i) {
 
-        if (samples > 1) {  // MSAA
-            target = GL_TEXTURE_2D_MULTISAMPLE;
-            glBindTexture(target, this->color);
-            // 最后一个参数表示MSAA过程中所有像素的子采样点的位置和个数都相同
-            glTexImage2DMultisample(target, samples, format, width, height, GL_TRUE);
+            if (samples > 1) {  // MSAA
+                target = GL_TEXTURE_2D_MULTISAMPLE;
+                glBindTexture(target, textures[i]);
+                // 最后一个参数表示MSAA过程中所有像素的子采样点的位置和个数都相同
+                glTexImage2DMultisample(target, samples, format, width, height, GL_TRUE);
 
-        } else {
-            target = GL_TEXTURE_2D;
-            glBindTexture(target, this->color);
-            glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, GL_RGB, type, nullptr);
+            } else {
+                target = GL_TEXTURE_2D;
+                glBindTexture(target, textures[i]);
+                glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, GL_RGB, type, nullptr);
+            }
+            glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glBindTexture(target, 0);
+
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0+i, target, textures[i], 0);
         }
-        glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glBindTexture(target, 0);
+        static const GLenum attachments[2]{GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+        glDrawBuffers(n, attachments);
 
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target, this->color, 0);
+        this->colors = textures;
     }
     else {
         glDrawBuffer(GL_NONE);
@@ -104,17 +113,17 @@ FrameBuffer::FrameBuffer(GLsizei width, GLsizei height, int mode, bool readable)
     if (depthMode || stencilMode) {
         GLint internalFormat, format, type, attachment;
         if (stencilMode) {
-            internalFormat = GL_DEPTH24_STENCIL8;
-            format = GL_DEPTH_STENCIL;
-            attachment = GL_DEPTH_STENCIL_ATTACHMENT;
-            type = GL_UNSIGNED_INT_24_8;
+            internalFormat  = GL_DEPTH24_STENCIL8;
+            format          = GL_DEPTH_STENCIL;
+            attachment      = GL_DEPTH_STENCIL_ATTACHMENT;
+            type            = GL_UNSIGNED_INT_24_8;
         } else {
-            internalFormat = GL_DEPTH_COMPONENT;
-            format = GL_DEPTH_COMPONENT;
-            attachment = GL_DEPTH_ATTACHMENT;
-            type = GL_FLOAT;
+            internalFormat  = GL_DEPTH_COMPONENT;
+            format          = GL_DEPTH_COMPONENT;
+            attachment      = GL_DEPTH_ATTACHMENT;
+            type            = GL_FLOAT;
         }
-        if (readable) {
+        if (depthStencilReadable) {
             // depth/stencil
             glGenTextures(1, &this->depth_stencil);
             glBindTexture(GL_TEXTURE_2D, this->depth_stencil);
@@ -153,23 +162,33 @@ void FrameBuffer::bind() const {
     else glBindFramebuffer(GL_FRAMEBUFFER, this->object);
 }
 
-GLuint FrameBuffer::getTexture() const {
-    return this->color;
+GLuint FrameBuffer::getTexture(int i) const {
+    if (this->colors == nullptr) {
+        std::cerr << "WARN::FRAMEBUFFER::Framebuffer " << this->object << " not contains color buffer\n";
+        return 0;
+    }
+    return this->colors[i];
 }
 
 FrameBuffer::~FrameBuffer() {
     glDeleteFramebuffers(1, &this->object);
     glDeleteRenderbuffers(1, &this->rbo);
-    glDeleteTextures(1, &this->color);
+    glDeleteTextures(MRT_TARGETS(mode), this->colors);
+    delete[] this->colors;
     glDeleteTextures(1, &this->depth_stencil);
     delete msBuffer;
 }
 
 void FrameBuffer::unbind() const {
     if (this->msBuffer != nullptr) {    // Enabled MSAA: blit data
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, this->msBuffer->object);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, this->object);
-        glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        GLuint in = this->msBuffer->object;
+        GLuint out = this->object;
+        int nTargets = MRT_TARGETS(mode);
+        for (int i = 0; i < nTargets; ++i) {
+            glNamedFramebufferReadBuffer(in, GL_COLOR_ATTACHMENT0 + i);
+            glNamedFramebufferDrawBuffer(out, GL_COLOR_ATTACHMENT0 + i);
+            glBlitNamedFramebuffer(in, out, 0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        }
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -179,7 +198,7 @@ void FrameBuffer::enableMSAA(int _mode, int samples) {
 }
 
 GLuint FrameBuffer::getDepthStencilTex() const {
-    if (this->readable) {
+    if (this->depthStencilReadable) {
         return this->depth_stencil;
     }
     std::cerr << "ERROR::FRAMEBUFFER::Cannot read depth/stencil texture when enabled render buffer\n";
@@ -189,7 +208,7 @@ GLuint FrameBuffer::getDepthStencilTex() const {
 FrameBufferCube::FrameBufferCube(GLsizei length, int mode): length(length) {
     glGenFramebuffers(1, &this->object);
     glBindFramebuffer(GL_FRAMEBUFFER, this->object);
-    if (mode & COLOR_BUFFER) {
+    if (mode & COLOR_LDR) {
         glGenTextures(1, &this->colorCube);
         glBindTexture(GL_TEXTURE_CUBE_MAP, this->colorCube);
         for (int i = 0; i < 6; ++i) {

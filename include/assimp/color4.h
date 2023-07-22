@@ -39,7 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ---------------------------------------------------------------------------
 */
 /** @file color4.h
- *  @brief RGBA color structure, including operators when compiling in C++
+ *  @brief RGBA colors structure, including operators when compiling in C++
  */
 #pragma once
 #ifndef AI_COLOR4D_H_INC
@@ -54,7 +54,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef __cplusplus
 
 // ----------------------------------------------------------------------------------
-/** Represents a color in Red-Green-Blue space including an
+/** Represents a colors in Red-Green-Blue space including an
 *   alpha component. Color values range from 0 to 1. */
 // ----------------------------------------------------------------------------------
 template <typename TReal>
@@ -77,14 +77,14 @@ public:
     bool operator != (const aiColor4t& other) const;
     bool operator <  (const aiColor4t& other) const;
 
-    // color tuple access, rgba order
+    // colors tuple access, rgba order
     inline TReal operator[](unsigned int i) const;
     inline TReal& operator[](unsigned int i);
 
-    /** check whether a color is (close to) black */
+    /** check whether a colors is (close to) black */
     inline bool IsBlack() const;
 
-    // Red, green, blue and alpha color values
+    // Red, green, blue and alpha colors values
     TReal r, g, b, a;
 };  // !struct aiColor4D
 

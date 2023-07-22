@@ -103,7 +103,7 @@ struct aiTexel {
                g != other.g || a != other.a;
     }
 
-    //! Conversion to a floating-point 4d color
+    //! Conversion to a floating-point 4d colors
     operator aiColor4D() const {
         return aiColor4D(r/255.f,g/255.f,b/255.f,a/255.f);
     }
@@ -120,10 +120,10 @@ struct aiTexel {
  *
  * Normally textures are contained in external files but some file formats embed
  * them directly in the model file. There are two types of embedded textures:
- * 1. Uncompressed textures. The color data is given in an uncompressed format.
+ * 1. Uncompressed textures. The colors data is given in an uncompressed format.
  * 2. Compressed textures stored in a file format like png or jpg. The raw file
  * bytes are given so the application must utilize an image decoder (e.g. DevIL) to
- * get access to the actual color data.
+ * get access to the actual colors data.
  *
  * Embedded textures are referenced from materials using strings like "*0", "*1", etc.
  * as the texture paths (a single asterisk character followed by the
@@ -150,12 +150,12 @@ struct aiTexture {
      *
      * If mHeight != 0 this member is show how data is packed. Hint will consist of
      * two parts: channel order and channel bitness (count of the bits for every
-     * color channel). For simple parsing by the viewer it's better to not omit
-     * absent color channel and just use 0 for bitness. For example:
+     * colors channel). For simple parsing by the viewer it's better to not omit
+     * absent colors channel and just use 0 for bitness. For example:
      * 1. Image contain RGBA and 8 bit per channel, achFormatHint == "rgba8888";
      * 2. Image contain ARGB and 8 bit per channel, achFormatHint == "argb8888";
      * 3. Image contain RGB and 5 bit for R and B channels and 6 bit for G channel, achFormatHint == "rgba5650";
-     * 4. One color image with B channel and 1 bit for it, achFormatHint == "rgba0010";
+     * 4. One colors image with B channel and 1 bit for it, achFormatHint == "rgba0010";
      * If mHeight == 0 then achFormatHint is set set to '\\0\\0\\0\\0' if the loader has no additional
      * information about the texture file format used OR the
      * file extension of the format without a trailing dot. If there

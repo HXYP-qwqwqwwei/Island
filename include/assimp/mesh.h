@@ -97,7 +97,7 @@ extern "C" {
 #endif
 
 /** @def AI_MAX_NUMBER_OF_COLOR_SETS
- *  Supported number of vertex color sets per mesh. */
+ *  Supported number of vertex colors sets per mesh. */
 
 #ifndef AI_MAX_NUMBER_OF_COLOR_SETS
 #define AI_MAX_NUMBER_OF_COLOR_SETS 0x8
@@ -673,7 +673,7 @@ struct aiMesh {
     */
     C_STRUCT aiVector3D *mBitangents;
 
-    /** Vertex color sets.
+    /** Vertex colors sets.
     * A mesh may contain 0 to #AI_MAX_NUMBER_OF_COLOR_SETS vertex
     * colors per vertex. nullptr if not present. Each array is
     * mNumVertices in size if present.
@@ -849,8 +849,8 @@ struct aiMesh {
     //! implies that the second is there, too.
     bool HasTangentsAndBitangents() const { return mTangents != nullptr && mBitangents != nullptr && mNumVertices > 0; }
 
-    //! Check whether the mesh contains a vertex color set
-    //! \param pIndex Index of the vertex color set
+    //! Check whether the mesh contains a vertex colors set
+    //! \param pIndex Index of the vertex colors set
     bool HasVertexColors(unsigned int pIndex) const {
         if (pIndex >= AI_MAX_NUMBER_OF_COLOR_SETS) {
             return false;
@@ -879,7 +879,7 @@ struct aiMesh {
         return n;
     }
 
-    //! Get the number of vertex color channels the mesh contains
+    //! Get the number of vertex colors channels the mesh contains
     unsigned int GetNumColorChannels() const {
         unsigned int n(0);
         while (n < AI_MAX_NUMBER_OF_COLOR_SETS && mColors[n]) {

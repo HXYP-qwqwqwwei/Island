@@ -111,8 +111,8 @@ void RenderShadow() {
     glm::mat4 dLightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 100.0f);
     glm::mat4 dLightView = dLightCamera.getView();
 
-    depthShader->use();
-    depthShader->uniformMatrix4fv(Shader::LIGHT_SPACE_MATRIX, DirectLight.spaceMtx);
+    DepthShader->use();
+    DepthShader->uniformMatrix4fv(Shader::LIGHT_SPACE_MATRIX, DirectLight.spaceMtx);
 
     const std::vector<const ModelInfo*>* models;
     static const std::vector<RenderType> types{SOLID, CUTOUT};

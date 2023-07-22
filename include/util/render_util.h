@@ -12,7 +12,6 @@
 #include "Model.h"
 
 using PLight = PointLight;
-using DLight = DirectionalLight;
 class ModelManager;
 
 struct ModelInfo {

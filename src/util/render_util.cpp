@@ -98,8 +98,3 @@ void renderPureColor(const Model* model, const glm::mat4* transMtx, size_t amoun
     mtxBuf.putData(amount * SZ_MAT4F, transMtx);
     model->draw(*shader, mtxBuf);
 }
-
-
-//ModelInfo::ModelInfo(Model model, RenderType type, uint id) : model(std::move(model)), type(type), id(id) {
-//
-//}
