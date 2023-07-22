@@ -11,7 +11,7 @@ void setupPointLight(const Shader* shader, const PointLight& light, int idx) {
     std::string header = "pointLights[";
     header += std::to_string(idx) + "].";
     shader->uniformVec3( header + "pos",   light.pos);
-    shader->uniformVec3( header + "colors", light.color);
+    shader->uniformVec3( header + "color", light.color);
     shader->uniformFloat(header + "linear", light.linear);
     shader->uniformFloat(header + "zFar",   light.zFar);
 
@@ -28,7 +28,7 @@ void setupPointLight(const Shader* shader, const PointLight& light) {
 
 void setupDirectionalLight(const Shader* shader, const DirectionalLight& light) {
     shader->uniformVec3("directLightInjection", light.injection);
-    shader->uniformVec3("directLight.colors", light.color);
+    shader->uniformVec3("directLight.color", light.color);
     shader->uniformVec3("directLight.ambient", light.ambient);
     shader->uniformMatrix4fv(Shader::LIGHT_SPACE_MATRIX, light.spaceMtx);
 

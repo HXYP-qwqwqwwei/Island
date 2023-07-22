@@ -104,7 +104,7 @@ namespace Assimp {
 * The data remains property of the object, it is intended to be accessed
 * read-only. The imported data will be destroyed along with the Importer
 * object. If the import fails, ReadFile() returns a nullptr pointer. In this
-* case you can retrieve a human-depthStencilReadable error description be calling
+* case you can retrieve a human-readable error description be calling
 * GetErrorString(). You can call ReadFile() multiple times with a single Importer
 * instance. Actually, constructing Importer objects involves quite many
 * allocations and may take some time, so it's better to reuse them as often as
@@ -399,7 +399,7 @@ public:
      * pointer to an aiScene object. The returned data is intended to be
      * read-only, the importer object keeps ownership of the data and will
      * destroy it upon destruction. If the import fails, nullptr is returned.
-     * A human-depthStencilReadable error description can be retrieved by calling
+     * A human-readable error description can be retrieved by calling
      * GetErrorString(). The previous scene will be deleted during this call.
      * @param pFile Path and filename to the file to be imported.
      * @param pFlags Optional post processing steps to be executed after
@@ -426,7 +426,7 @@ public:
      * pointer to an aiScene object. The returned data is intended to be
      * read-only, the importer object keeps ownership of the data and will
      * destroy it upon destruction. If the import fails, nullptr is returned.
-     * A human-depthStencilReadable error description can be retrieved by calling
+     * A human-readable error description can be retrieved by calling
      * GetErrorString(). The previous scene will be deleted during this call.
      * Calling this method doesn't affect the active IOSystem.
      * @param pBuffer Pointer to the file data

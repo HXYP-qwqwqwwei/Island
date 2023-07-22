@@ -407,7 +407,7 @@ enum aiComponent
     aiComponent_TANGENTS_AND_BITANGENTS = 0x4u,
 #endif
 
-    /** ALL colors sets
+    /** ALL color sets
      * Use aiComponent_COLORn(N) to specify the N'th set */
     aiComponent_COLORS = 0x8,
 
@@ -453,7 +453,7 @@ enum aiComponent
 #endif
 };
 
-// Remove a specific colors channel 'n'
+// Remove a specific color channel 'n'
 #define aiComponent_COLORSn(n) (1u << (n+20u))
 
 // Remove a specific UV channel 'n'

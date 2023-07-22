@@ -59,7 +59,7 @@ public:
     static constexpr const char MODEL[] = "model";
     static constexpr const char LIGHT_SPACE_MATRIX[] = "lightSpaceMatrix";
     static constexpr const char VIEW_POS[] = "viewPos";
-    static constexpr const char COLOR[] = "colors";
+    static constexpr const char COLOR[] = "color";
     static constexpr const char GAUSSIAN_HORIZONTAL[] = "horizontal";
     static constexpr const char SHININESS[] = "texes.shininess";
     static constexpr const char TEXTURES[] = "texes.";

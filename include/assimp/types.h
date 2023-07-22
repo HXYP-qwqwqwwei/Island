@@ -160,7 +160,7 @@ struct aiRay {
 }; // !struct aiRay
 
 // ----------------------------------------------------------------------------------
-/** Represents a colors in Red-Green-Blue space.
+/** Represents a color in Red-Green-Blue space.
 */
 struct aiColor3D {
 #ifdef __cplusplus
@@ -213,12 +213,12 @@ struct aiColor3D {
         return aiColor3D(r * f, g * f, b * f);
     }
 
-    /** Access a specific colors component */
+    /** Access a specific color component */
     ai_real operator[](unsigned int i) const {
         return *(&r + i);
     }
 
-    /** Access a specific colors component */
+    /** Access a specific color component */
     ai_real &operator[](unsigned int i) {
         if (0 == i) {
             return r;
@@ -230,7 +230,7 @@ struct aiColor3D {
         return r;
     }
 
-    /** Check whether a colors is black */
+    /** Check whether a color is black */
     bool IsBlack() const {
         static const ai_real epsilon = ai_real(10e-3);
         return std::fabs(r) < epsilon && std::fabs(g) < epsilon && std::fabs(b) < epsilon;
@@ -238,7 +238,7 @@ struct aiColor3D {
 
 #endif // !__cplusplus
 
-    //! Red, green and blue colors values
+    //! Red, green and blue color values
     ai_real r, g, b;
 }; // !struct aiColor3D
 

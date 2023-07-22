@@ -243,7 +243,7 @@ enum aiTextureType {
      *
      *  The glossiness is in fact the exponent of the specular
      *  (phong) lighting equation. Usually there is a conversion
-     *  function defined to map the linear colors values in the
+     *  function defined to map the linear color values in the
      *  texture to a suitable exponent. Have fun.
     */
     aiTextureType_SHININESS = 7,
@@ -258,7 +258,7 @@ enum aiTextureType {
     /** Displacement texture
      *
      *  The exact purpose and format is application-dependent.
-     *  Higher colors values stand for higher vertex displacements.
+     *  Higher color values stand for higher vertex displacements.
     */
     aiTextureType_DISPLACEMENT = 9,
 
@@ -266,14 +266,14 @@ enum aiTextureType {
      *
      *  Both 'Lightmaps' and dedicated 'ambient occlusion maps' are
      *  covered by this material property. The texture contains a
-     *  scaling value for the final colors value of a pixel. Its
+     *  scaling value for the final color value of a pixel. Its
      *  intensity is not affected by incoming light.
     */
     aiTextureType_LIGHTMAP = 10,
 
     /** Reflection texture
      *
-     * Contains the colors of a perfect mirror reflection.
+     * Contains the color of a perfect mirror reflection.
      * Rarely used, almost never for real-time applications.
     */
     aiTextureType_REFLECTION = 11,
@@ -436,7 +436,7 @@ enum aiShadingMode {
  *  This corresponds to the #AI_MATKEY_TEXFLAGS property.
 */
 enum aiTextureFlags {
-    /** The texture's colors values have to be inverted (component-wise 1-n)
+    /** The texture's color values have to be inverted (component-wise 1-n)
      */
     aiTextureFlags_Invert = 0x1,
 
@@ -467,15 +467,15 @@ enum aiTextureFlags {
 /** @brief Defines alpha-blend flags.
  *
  *  If you're familiar with OpenGL or D3D, these flags aren't new to you.
- *  They define *how* the final colors value of a pixel is computed, basing
- *  on the previous colors at that pixel and the new colors value from the
+ *  They define *how* the final color value of a pixel is computed, basing
+ *  on the previous color at that pixel and the new color value from the
  *  material.
  *  The blend formula is:
  *  @code
  *    SourceColor * SourceBlend + DestColor * DestBlend
  *  @endcode
- *  where DestColor is the previous colors in the frame-buffer at this
- *  position and SourceColor is the material colors before the transparency
+ *  where DestColor is the previous color in the frame-buffer at this
+ *  position and SourceColor is the material color before the transparency
  *  calculation.<br>
  *  This corresponds to the #AI_MATKEY_BLEND_FUNC property.
 */
@@ -976,7 +976,7 @@ extern "C" {
 
 // Metallic/Roughness Workflow
 // ---------------------------
-// Base RGBA colors factor. Will be multiplied by final base colors texture values if extant
+// Base RGBA color factor. Will be multiplied by final base color texture values if extant
 // Note: Importers may choose to copy this into AI_MATKEY_COLOR_DIFFUSE for compatibility
 // with renderers and formats that do not support Metallic/Roughness PBR
 #define AI_MATKEY_BASE_COLOR "$clr.base", 0, 0
@@ -1006,7 +1006,7 @@ extern "C" {
 
 // Sheen
 // -----
-// Sheen base RGB colors. Default {0,0,0}
+// Sheen base RGB color. Default {0,0,0}
 #define AI_MATKEY_SHEEN_COLOR_FACTOR "$clr.sheen.factor", 0, 0
 // Sheen Roughness Factor.
 #define AI_MATKEY_SHEEN_ROUGHNESS_FACTOR "$mat.sheen.roughnessFactor", 0, 0
@@ -1041,7 +1041,7 @@ extern "C" {
 #define AI_MATKEY_VOLUME_THICKNESS_TEXTURE aiTextureType_TRANSMISSION, 1
 // Density of the medium given as the average distance that light travels in the medium before interacting with a particle.
 #define AI_MATKEY_VOLUME_ATTENUATION_DISTANCE "$mat.volume.attenuationDistance", 0, 0
-// The colors that white light turns into due to absorption when reaching the attenuation distance.
+// The color that white light turns into due to absorption when reaching the attenuation distance.
 #define AI_MATKEY_VOLUME_ATTENUATION_COLOR "$mat.volume.attenuationColor", 0, 0
 
 // Emissive
@@ -1568,7 +1568,7 @@ inline aiReturn aiGetMaterialInteger(const C_STRUCT aiMaterial *pMat,
 }
 
 // ---------------------------------------------------------------------------
-/** @brief Retrieve a colors value from the material property table
+/** @brief Retrieve a color value from the material property table
 *
 * See the sample for aiGetMaterialFloat for more information*/
 // ---------------------------------------------------------------------------
