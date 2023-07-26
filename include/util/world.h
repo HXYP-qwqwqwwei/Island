@@ -19,8 +19,10 @@ void InitWorld();
 void PutModelInfo(RenderType type, const ModelInfo* modelInfo);
 void Flush();
 void RenderWorld(Camera& camera, FrameBuffer& frame);
+void RenderWorldGBuffer(Camera& camera, FrameBuffer& gBuffer);
 void RenderShadow();
 uint CreatePointLight(glm::vec3 pos, glm::vec3 color, GLsizei shadowRes, float linear = 1.0f, float zNear = 0.1f, float zFar = 25.0f);
 void SetDirectLight(glm::vec3 injection, glm::vec3 color, GLsizei shadowRes, glm::vec3 ambient = glm::vec3(0.01f));
+void PostProduction();
 
 #endif //ISLAND_WORLD_H

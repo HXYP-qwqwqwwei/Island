@@ -16,6 +16,8 @@ static Buffer* PVMatBuffer;
 ModelManager MODEL_MANAGER;
 
 
+void UnbindAllTextures();
+
 void InitWorld() {
     glEnable(GL_STENCIL_TEST);
     glEnable(GL_BLEND);
@@ -93,7 +95,59 @@ void RenderWorld(Camera& camera, FrameBuffer& frame) {
 
     PVMatBuffer->unbind();
     frame.unbind();
+    UnbindAllTextures();
 }
+
+
+void RenderWorldGBuffer(Camera& camera, FrameBuffer& gBuffer) {
+
+    GLsizei width = gBuffer.width;
+    GLsizei height = gBuffer.height;
+    glViewport(0, 0, width, height);
+    gBuffer.bind();
+
+    glClearColor(DirectLight.ambient.r, DirectLight.ambient.g, DirectLight.ambient.b, 1.0F);
+
+    // Depth test
+    glDepthFunc(GL_LESS);   // Default
+    // Stencil test
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);  // when a fragment passed ST, replace its value
+    // Blend
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // 清除上一帧的颜色/深度测试/模板测试缓冲
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+
+
+    const glm::mat4 view = camera.getView();
+    const glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
+
+    // uniform buffer -- projection and view matrix
+    PVMatBuffer->bind();
+    // set view and projection
+    PVMatBuffer->subData(0, SZ_MAT4F, glm::value_ptr(view));
+    PVMatBuffer->subData(SZ_MAT4F, SZ_MAT4F, glm::value_ptr(proj));
+
+    // Normal Models
+    const std::vector<const ModelInfo*>* models;
+    static const std::vector<RenderType> types{SOLID, CUTOUT, TRANSPARENT};
+
+    Light light(DirectLight, PointLights);
+    for (RenderType type: types) {
+        models = &Models[type];
+        for (auto* info: *models) {
+            renderGBuffer(MODEL_MANAGER[info->id], &info->transMatrices[0], info->transMatrices.size());
+        }
+    }
+
+    PVMatBuffer->unbind();
+    gBuffer.unbind();
+    UnbindAllTextures();
+}
+
 
 
 void RenderShadow() {
@@ -106,26 +160,21 @@ void RenderShadow() {
     glEnable(GL_DEPTH_TEST);
     glClear(GL_DEPTH_BUFFER_BIT);
 
-
-    Camera dLightCamera(DirectLight.injection * -3.0f , -glm::normalize(DirectLight.injection));
-    glm::mat4 dLightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 100.0f);
-    glm::mat4 dLightView = dLightCamera.getView();
-
-    DepthShader->use();
-    DepthShader->uniformMatrix4fv(Shader::LIGHT_SPACE_MATRIX, DirectLight.spaceMtx);
-
     const std::vector<const ModelInfo*>* models;
     static const std::vector<RenderType> types{SOLID, CUTOUT};
 
+
+    /*================== Directional Light Shadow ==================*/
     for (RenderType type: types) {
         models = &Models[type];
-        Light light(DirectLight, PointLights);
         for (auto* info: *models) {
-            render(MODEL_MANAGER[info->id], SHADOW, dLightCamera, &info->transMatrices[0], info->transMatrices.size(), light);
+            renderShadow(MODEL_MANAGER[info->id], &info->transMatrices[0], info->transMatrices.size(), DirectLight);
         }
     }
     buffer->unbind();
 
+
+    /*================== Point Light Shadow ==================*/
     size_t amount = PointLights.size();
     for (size_t i = 0; i < amount; ++i) {
         const auto* shadowBuf = PointShadowBuffers[i];
@@ -142,6 +191,12 @@ void RenderShadow() {
             }
         }
     }
+    UnbindAllTextures();
+}
+
+void UnbindAllTextures() {
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
 
 
@@ -157,18 +212,23 @@ uint CreatePointLight(glm::vec3 pos, glm::vec3 color, GLsizei shadowRes, float l
 
 
 void SetDirectLight(glm::vec3 injection, glm::vec3 color, GLsizei shadowRes, glm::vec3 ambient) {
-    Camera dLightCamera(injection * -3.0f , -glm::normalize(injection));
-    glm::mat4 dLightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.01f, 100.0f);
+    Camera dLightCamera(injection * -30.0f , -glm::normalize(injection));
+    glm::mat4 dLightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.01f, 1000.0f);
     glm::mat4 dLightView = dLightCamera.getView();
 
     delete DirectShadowBuffer;
 
-
     DirectLight = {color, injection, ambient};
-    auto* shadowMap = new FrameBuffer(shadowRes, shadowRes, DEPTH, true);
-    DirectLight.shadow = shadowMap->getDepthStencilTex();
+    auto* shadowBuffer = new FrameBuffer(shadowRes, shadowRes);
+    shadowBuffer->depthBuffer().build();
+    DirectLight.shadow = shadowBuffer->getDepthStencilTex();
+    DirectLight.spaceMtx = dLightProj * dLightView;
 
-    DirectShadowBuffer = shadowMap;
+    DirectShadowBuffer = shadowBuffer;
+}
+
+void PostProduction() {
+
 }
 
 

@@ -12,20 +12,6 @@ in mat3 TBN;
 layout (location = 0) out vec4 fragColor;
 layout (location = 1) out vec4 brightColor;
 
-struct PointLight {
-    vec3 pos;
-    vec3 color;
-    float linear;
-    float zFar;
-    samplerCube shadowMap;
-};
-
-struct DirectLight {
-    vec3 color;
-    vec3 ambient;
-    sampler2D shadowMap;
-};
-
 #define N_TEXTURE 4
 struct Textures {
     sampler2D diffuse0;
@@ -36,11 +22,26 @@ struct Textures {
     float shininess;
 };
 
-uniform samplerCube environment;
+struct PointLight {
+    vec3 pos;
+    vec3 color;
+    float linear;
+    float zFar;
+    samplerCube shadowMap;
+};
+
+struct DirectLight {
+    vec3 injection;
+    vec3 color;
+    vec3 ambient;
+    sampler2D shadowMap;
+};
+
 uniform PointLight pointLights[4];
 uniform DirectLight directLight;
+
+uniform samplerCube environment;
 uniform Textures texes;
-uniform vec3 directLightInjection;
 
 
 vec2 parallaxFixedUV(vec3 view);
@@ -70,7 +71,7 @@ void main() {
 
     // directional light
     vec3 diffuse_dLight = directLight.color * max(0.0f, dot(-dLightInj_tanSpace, texNorm));
-    float dShadow       = dLightShadow(fPosLightSpace, directLightInjection);
+    float dShadow       = dLightShadow(fPosLightSpace, directLight.injection);
     diffuse_dLight     *= (1 - dShadow);
     vec3 diffuse        = diffuse_dLight;
 

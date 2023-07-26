@@ -19,6 +19,7 @@ using GLObject = GLuint;
 using GLLoc = GLint;
 
 #define ISLAND_ENABLE_HDR
+//#define ISLAND_ENABLE_DEFERRED_SHADING
 
 int main() {
     glfwInit();
@@ -38,6 +39,7 @@ int main() {
         std::cerr << "Failed to initialize GLAD\n";
         return -1;
     }
+    glGetError();
 
     // compile Shader programs
     compileShaders();
@@ -58,8 +60,6 @@ int main() {
     Texture2D cubeRefl = load_texture("container2_specular.png", dir, aiTextureType_REFLECTION);
     Texture2D cubeNorm = load_texture("container2_normals.png", dir, aiTextureType_NORMALS);
 
-    std::string s = std::to_string(1.234);
-    std::reverse(s.begin(), s.end());
 
     Texture2D toyBoxDiff = load_texture("toy_box_diffuse.png", dir, aiTextureType_DIFFUSE);
     Texture2D toyBoxSpec = {textures::WHITE_RGB, aiTextureType_SPECULAR};
@@ -86,7 +86,7 @@ int main() {
         auto woodenFloor    = [=]() -> Model {return shapes::Rectangle(16, 16, {floorDiff, floorSpec, floorNorm});};
         auto rgbWindow      = [=]() -> Model {return shapes::Rectangle(1, 1, {windowTexDiff});};
         auto grass          = [=]() -> Model {return shapes::Rectangle(1, 1, {grassDiff});};
-        auto toyBox     = [=]() -> Model {
+        auto toyBox         = [=]() -> Model {
             return shapes::Cube(1, {toyBoxDiff, toyBoxNorm, toyBoxPara, toyBoxSpec});
         };
 
@@ -102,22 +102,39 @@ int main() {
     SkyBox* skyBox  = shapes::SkyBoxCube(skyBoxTex);
 
     // Screen
-#ifdef ISLAND_ENABLE_HDR
-    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight, COLOR_HDR | MRT(2));
-    frameBuffer.enableMSAA(COLOR_HDR | MRT(2) | DEPTH | STENCIL, 4);
+#ifdef ISLAND_ENABLE_DEFERRED_SHADING
+    // G-Buffer
+    FrameBuffer gBuffer(GameScrWidth, GameScrHeight);
+    gBuffer.texture(RGB_FLOAT, 2)   // position & normals
+            .texture(RGB_BYTE, 2)   // diffuse & specular
+            .depthBuffer().stencilBuffer().useRenderBuffer()
+            .build();
+
+    Screen* screen = shapes::ScreenRect({
+        gBuffer.getTexture(0),
+        gBuffer.getTexture(1),
+        gBuffer.getTexture(2),
+        gBuffer.getTexture(3),
+    });
+
+#elif defined(ISLAND_ENABLE_HDR)
+    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight);
+    frameBuffer.texture(RGB_FLOAT, 2).depthBuffer().stencilBuffer().useRenderBuffer().build();
     Screen* bright = shapes::ScreenRect({frameBuffer.getTexture(1)});
     // For Bloom
     FrameBuffer* pingPongBuffer[2];
     Screen* blurredBright[2];
     for (int i = 0; i < 2; ++i) {
-        pingPongBuffer[i] = new FrameBuffer(GameScrWidth, GameScrHeight, COLOR_HDR);
+        auto* buffer = new FrameBuffer(GameScrWidth, GameScrHeight);
+        buffer->texture(RGB_FLOAT).build();
+        pingPongBuffer[i] = buffer;
         blurredBright[1 - i] = shapes::ScreenRect({pingPongBuffer[i]->getTexture()});
     }
 
     Screen* screen = shapes::ScreenRect({frameBuffer.getTexture(), pingPongBuffer[0]->getTexture()});
 #else
-    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight, COLOR_LDR);
-    frameBuffer.enableMSAA(COLOR_LDR | DEPTH | STENCIL, 4);
+    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight, RGB_BYTE);
+    frameBuffer.enableMSAA(RGB_BYTE | DEPTH | STENCIL, 4);
     Screen* screen = shapes::ScreenRect({frameBuffer.getTexture()});
 #endif
 
@@ -133,7 +150,6 @@ int main() {
     CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 4096);
     CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 4096);
 
-    glGetError();
     // render loop
     while (!glfwWindowShouldClose(window)) {
         // input
@@ -196,28 +212,33 @@ int main() {
         });
         PutModelInfo(CUTOUT, &grasses);
 
-        ModelInfo rgb_windows = MODEL_MANAGER.createInfo("rgb_window");
-        glm::vec3 poses[3];
-        poses[0] = glm::vec3(-2, 0, 2.5f);
-        poses[1] = glm::vec3(1, 0, 1.5f);
-        poses[2] = glm::vec3(-3, 0, 1.5f);
-        auto cmp = [&] (const glm::vec3& v1, glm::vec3& v2) {
-            return glm::distance(camera.getPos(), v1) > glm::distance(camera.getPos(), v2);
-        };
-        std::sort(poses, poses+3, cmp);
+//        ModelInfo rgb_windows = MODEL_MANAGER.createInfo("rgb_window");
+//        glm::vec3 poses[3];
+//        poses[0] = glm::vec3(-2, 0, 2.5f);
+//        poses[1] = glm::vec3(1, 0, 1.5f);
+//        poses[2] = glm::vec3(-3, 0, 1.5f);
+//        auto cmp = [&] (const glm::vec3& v1, glm::vec3& v2) {
+//            return glm::distance(camera.getPos(), v1) > glm::distance(camera.getPos(), v2);
+//        };
+//        std::sort(poses, poses+3, cmp);
+//
+//        rgb_windows.addInstance({
+//                glm::translate(modelMtx, poses[0]),
+//                glm::translate(modelMtx, poses[1]),
+//                glm::translate(modelMtx, poses[2])
+//        });
+//        PutModelInfo(TRANSPARENT, &rgb_windows);
 
-        rgb_windows.addInstance({
-                glm::translate(modelMtx, poses[0]),
-                glm::translate(modelMtx, poses[1]),
-                glm::translate(modelMtx, poses[2])
-        });
-        PutModelInfo(TRANSPARENT, &rgb_windows);
-
-
+#ifdef ISLAND_ENABLE_DEFERRED_SHADING
+        RenderWorldGBuffer(camera, gBuffer);
+        Flush();
+#else
         RenderShadow();
+//        glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
         RenderWorld(camera, frameBuffer);
         Flush();
-
+#endif
 
         /*================ sky box ================*/
 ////        SkyShader.use();
@@ -229,7 +250,13 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT);
         glDisable(GL_DEPTH_TEST);
 
-#ifdef ISLAND_ENABLE_HDR
+
+
+
+#ifdef ISLAND_ENABLE_DEFERRED_SHADING
+        DeferredShader->use();
+        screen->draw(*DeferredShader);
+#elif defined(ISLAND_ENABLE_HDR)
         GaussianBlurShader->use();
         int gaussianLevels = 10;
         bool horizontal = false;

@@ -56,14 +56,14 @@ public:
     void setEnvironmentMap(GLuint envMap) const;
 
     /*===== Uniform names =====*/
-    static constexpr const char MODEL[] = "model";
-    static constexpr const char LIGHT_SPACE_MATRIX[] = "lightSpaceMatrix";
-    static constexpr const char VIEW_POS[] = "viewPos";
-    static constexpr const char COLOR[] = "color";
-    static constexpr const char GAUSSIAN_HORIZONTAL[] = "horizontal";
-    static constexpr const char SHININESS[] = "texes.shininess";
-    static constexpr const char TEXTURES[] = "texes.";
-    static constexpr const char ENVIRONMENT_MAP[] = "environment";
+//    static constexpr const char MODEL[]                 = "model";
+    static constexpr const char LIGHT_SPACE_MATRIX[]    = "lightSpaceMtx";
+    static constexpr const char VIEW_POS[]              = "viewPos";
+    static constexpr const char COLOR[]                 = "color";
+    static constexpr const char GAUSSIAN_HORIZONTAL[]   = "horizontal";
+    static constexpr const char SHININESS[]             = "texes.shininess";
+    static constexpr const char TEXTURES[]              = "texes.";
+    static constexpr const char ENVIRONMENT_MAP[]       = "environment";
 //    static constexpr const char PROJECTION[] = "proj";
     static constexpr const char CUBE_SPACE_MATRICES[6][21] = {
             "cubeSpaceMatrices[0]",
@@ -87,6 +87,9 @@ extern Shader* ScreenShaderHDR;
 extern Shader* SkyShader;
 extern Shader* DepthShader;
 extern Shader* DepthCubeShader;
+extern Shader* GBufferShader;
+extern Shader* DeferredShader;
+
 
 extern Shader* GaussianBlurShader;
 

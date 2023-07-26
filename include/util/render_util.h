@@ -12,6 +12,7 @@
 #include "Model.h"
 
 using PLight = PointLight;
+using DLight = DirectionalLight;
 class ModelManager;
 
 struct ModelInfo {
@@ -39,11 +40,16 @@ void render(const Model* model, RenderType type, const Camera& camera, const glm
 
 void render(const Model* model, RenderType type, const Camera& camera, const glm::mat4& transMtx, const Light& light);
 
+void renderShadow(const Model* model, const glm::mat4* transMtx, size_t amount, const DLight& light);
+
 void renderPointShadow(const Model* model, const glm::mat4* transMtx, size_t amount, const PLight& light);
 
 void renderPointShadow(const Model* model, const glm::mat4& transMtx, const PLight& light);
 
 void renderPureColor(const Model* model, const glm::mat4* transMtx, size_t amount, glm::vec3 color);
+
+void renderGBuffer(const Model *model, const glm::mat4 *transMtx, size_t amount);
+
 
 
 #endif //ISLAND_MODEL_MANAGER_H

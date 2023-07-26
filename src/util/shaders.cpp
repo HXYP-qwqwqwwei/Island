@@ -14,6 +14,8 @@ Shader* ScreenShaderHDR;
 Shader* SkyShader;
 Shader* DepthShader;
 Shader* DepthCubeShader;
+Shader* GBufferShader;
+Shader* DeferredShader;
 
 Shader* GaussianBlurShader;
 
@@ -50,6 +52,16 @@ void compileShaders() {
     ScreenShaderHDR->loadShader("ScreenShader.vert", GL_VERTEX_SHADER);
     ScreenShaderHDR->loadShader("ScreenShaderHDR.frag", GL_FRAGMENT_SHADER);
     ScreenShaderHDR->link();
+
+    GBufferShader = new Shader();
+    GBufferShader->loadShader("GBufferShader.vert", GL_VERTEX_SHADER);
+    GBufferShader->loadShader("GBufferShader.frag", GL_FRAGMENT_SHADER);
+    GBufferShader->link();
+
+    DeferredShader = new Shader();
+    DeferredShader->loadShader("ScreenShader.vert", GL_VERTEX_SHADER);
+    DeferredShader->loadShader("DeferredScreen.frag", GL_FRAGMENT_SHADER);
+    DeferredShader->link();
 
 
     SkyShader = new Shader();

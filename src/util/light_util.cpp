@@ -27,7 +27,7 @@ void setupPointLight(const Shader* shader, const PointLight& light) {
 
 
 void setupDirectionalLight(const Shader* shader, const DirectionalLight& light) {
-    shader->uniformVec3("directLightInjection", light.injection);
+    shader->uniformVec3("directLight.injection", light.injection);
     shader->uniformVec3("directLight.color", light.color);
     shader->uniformVec3("directLight.ambient", light.ambient);
     shader->uniformMatrix4fv(Shader::LIGHT_SPACE_MATRIX, light.spaceMtx);
@@ -38,6 +38,7 @@ void setupDirectionalLight(const Shader* shader, const DirectionalLight& light) 
 }
 
 void setupLight(const Shader* shader, const Light& light) {
+
     setupDirectionalLight(shader, light.dLight);
     for (int i = 0; i < MAX_PLIGHT_AMOUNT; ++i) {
         setupPointLight(shader, light.pLights[i], i);

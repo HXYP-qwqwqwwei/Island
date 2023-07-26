@@ -60,6 +60,16 @@ void render(const Model* model, RenderType type, const Camera& camera, const glm
     render(model, type, camera, &transMtx, 1, light);
 }
 
+void renderShadow(const Model* model, const glm::mat4* transMtx, size_t amount, const DLight& light) {
+    const Shader* shader = DepthShader;
+    shader->use();
+
+    setupDirectionalLight(shader, light);
+    Buffer mtxBuf(GL_ARRAY_BUFFER);
+    mtxBuf.putData(amount * SZ_MAT4F, transMtx);
+    model->draw(*shader, mtxBuf);
+}
+
 
 void renderPointShadow(const Model* model, const glm::mat4* transMtx, size_t amount, const PLight& light) {
     const Shader* shader = selectCubeShader(SHADOW);
@@ -94,6 +104,15 @@ void renderPureColor(const Model* model, const glm::mat4* transMtx, size_t amoun
     shader->use();
 
     shader->uniformVec3(Shader::COLOR, color);
+    Buffer mtxBuf(GL_ARRAY_BUFFER);
+    mtxBuf.putData(amount * SZ_MAT4F, transMtx);
+    model->draw(*shader, mtxBuf);
+}
+
+void renderGBuffer(const Model *model, const glm::mat4 *transMtx, size_t amount) {
+    const Shader* shader = GBufferShader;
+    shader->use();
+
     Buffer mtxBuf(GL_ARRAY_BUFFER);
     mtxBuf.putData(amount * SZ_MAT4F, transMtx);
     model->draw(*shader, mtxBuf);

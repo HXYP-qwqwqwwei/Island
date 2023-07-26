@@ -11,35 +11,9 @@ layout (std140, binding = 0) uniform Matrics {
 };
 
 out vec3 fPos;
-out vec4 fPosLightSpace;
 out vec3 fNormal;
 out vec2 fTexUV;
-out vec3 pLightInj_tanSpace[4];
-out vec3 dLightInj_tanSpace;
-out vec3 viewVec_tanSpace;
 out mat3 TBN;
-
-uniform mat4 lightSpaceMtx;
-uniform vec3 viewPos;
-
-
-struct PointLight {
-    vec3 pos;
-    vec3 color;
-    float linear;
-    float zFar;
-    samplerCube shadowMap;
-};
-
-struct DirectLight {
-    vec3 injection;
-    vec3 color;
-    vec3 ambient;
-    sampler2D shadowMap;
-};
-
-uniform PointLight pointLights[4];
-uniform DirectLight directLight;
 
 
 void main() {
@@ -49,8 +23,6 @@ void main() {
     fPos     = posVec.xyz;
     fNormal  = normalize(model3x3 * vNormal);
     fTexUV   = vTexUV;
-    // Light Space
-    fPosLightSpace = lightSpaceMtx * vec4(fPos, 1.0);
 
     // Tangent Space Transform
     vec3 T = model3x3 * vTangent;
@@ -58,10 +30,4 @@ void main() {
     vec3 B = cross(fNormal, T);
 
     TBN = mat3(T, B, fNormal);
-    mat3 TBN_inverse    = transpose(mat3(TBN));
-    for (int i = 0; i < 4; ++i) {
-        pLightInj_tanSpace[i].xyz = TBN_inverse * (fPos - pointLights[i].pos);
-    }
-    dLightInj_tanSpace  = normalize(TBN_inverse * directLight.injection);
-    viewVec_tanSpace    = TBN_inverse * (viewPos - fPos);
 }
