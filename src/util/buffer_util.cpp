@@ -477,3 +477,9 @@ void FrameBuffer::bind() const {
 void FrameBuffer::unbind() const {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+
+void FrameBuffer::blitDepth(const FrameBuffer &input, GLenum bits) const {
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, input.object);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, this->object);
+    glBlitFramebuffer(0, 0, input.width, input.height, 0, 0, width, height, bits, GL_NEAREST);
+}

@@ -30,7 +30,7 @@ enum RenderType {
     TRANSPARENT,
     SCREEN,
     SHADOW,
-    PURE
+    PURE,
 };
 
 
@@ -97,5 +97,6 @@ extern Shader* GaussianBlurShader;
 void compileShaders();
 const Shader* selectShader(RenderType type);
 const Shader* selectCubeShader(RenderType type);
+const Shader* selectGBufferShader(RenderType type);
 
 #endif //ISLAND_SHADERS_H

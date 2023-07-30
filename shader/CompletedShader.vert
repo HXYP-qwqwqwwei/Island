@@ -12,7 +12,6 @@ layout (std140, binding = 0) uniform Matrics {
 
 out vec3 fPos;
 out vec4 fPosLightSpace;
-out vec3 fNormal;
 out vec2 fTexUV;
 out vec3 pLightInj_tanSpace[4];
 out vec3 dLightInj_tanSpace;
@@ -28,14 +27,14 @@ struct PointLight {
     vec3 color;
     float linear;
     float zFar;
-    samplerCube shadowMap;
+    samplerCube depthTex;
 };
 
 struct DirectLight {
     vec3 injection;
     vec3 color;
     vec3 ambient;
-    sampler2D shadowMap;
+    sampler2D depthTex;
 };
 
 uniform PointLight pointLights[4];
@@ -46,18 +45,18 @@ void main() {
     vec4 posVec     = vModel * vec4(vPos, 1.0);
     gl_Position     = proj * view * posVec;
     mat3 model3x3   = mat3(vModel);
-    fPos     = posVec.xyz;
-    fNormal  = normalize(model3x3 * vNormal);
-    fTexUV   = vTexUV;
+    fPos    = posVec.xyz;
+    fTexUV  = vTexUV;
     // Light Space
     fPosLightSpace = lightSpaceMtx * vec4(fPos, 1.0);
 
     // Tangent Space Transform
+    vec3 N = normalize(model3x3 * vNormal);
     vec3 T = model3x3 * vTangent;
-    T = normalize(T - dot(T, fNormal) * fNormal);   // Schmidt正交化
-    vec3 B = cross(fNormal, T);
+    T = normalize(T - dot(T, N) * N);   // Schmidt正交化
+    vec3 B = cross(N, T);
 
-    TBN = mat3(T, B, fNormal);
+    TBN = mat3(T, B, N);
     mat3 TBN_inverse    = transpose(mat3(TBN));
     for (int i = 0; i < 4; ++i) {
         pLightInj_tanSpace[i].xyz = TBN_inverse * (fPos - pointLights[i].pos);

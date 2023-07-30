@@ -2,7 +2,6 @@
 
 in vec3 fPos;
 in vec4 fPosLightSpace;
-in vec3 fNormal;
 in vec2 fTexUV;
 in vec3 pLightInj_tanSpace[4];
 in vec3 dLightInj_tanSpace;
@@ -27,14 +26,14 @@ struct PointLight {
     vec3 color;
     float linear;
     float zFar;
-    samplerCube shadowMap;
+    samplerCube depthTex;
 };
 
 struct DirectLight {
     vec3 injection;
     vec3 color;
     vec3 ambient;
-    sampler2D shadowMap;
+    sampler2D depthTex;
 };
 
 uniform PointLight pointLights[4];
@@ -43,15 +42,14 @@ uniform DirectLight directLight;
 uniform samplerCube environment;
 uniform Textures texes;
 
-
-vec2 parallaxFixedUV(vec3 view);
-float pLightShadow(vec3 fPos, vec3 lightPos, samplerCube shadowMap, float zFar);
-float dLightShadow(vec4 fPosLSpace, vec3 lightInjction);
+vec2 parallaxFixedUV(sampler2D parallaxTex, vec3 view);
+float pointLightShadow(samplerCube depthTex, vec3 fPos, vec3 lightPos, vec3 norm, float zFar);
+float directLightShadow(sampler2D depthTex, vec4 fPosLSpace, vec3 injction, vec3 norm);
 
 
 void main() {
     vec3 view    = normalize(viewVec_tanSpace);
-    vec2 fixedUV = parallaxFixedUV(view);
+    vec2 fixedUV = parallaxFixedUV(texes.parallax0, view);
 
     vec4 texDiff = texture(texes.diffuse0,  fixedUV);
     texDiff = vec4(pow(texDiff.rgb, vec3(2.2)), texDiff.a);     // Transfer to Linear Space
@@ -68,7 +66,7 @@ void main() {
 
     // directional light
     vec3 diffuse_dLight = directLight.color * max(0.0f, dot(-dLightInj_tanSpace, texNorm));
-    float dShadow       = dLightShadow(fPosLightSpace, directLight.injection);
+    float dShadow       = directLightShadow(directLight.depthTex, fPosLightSpace, directLight.injection, texNorm);
     diffuse_dLight     *= (1 - dShadow);
     vec3 diffuse        = diffuse_dLight;
 
@@ -82,7 +80,7 @@ void main() {
 
     // point light
     for (int i = 0; i < 4; ++i) {
-        float pShadow       = pLightShadow(fPos, pointLights[i].pos, pointLights[i].shadowMap, pointLights[i].zFar);
+        float pShadow       = pointLightShadow(pointLights[i].depthTex, fPos, pointLights[i].pos, texNorm, pointLights[i].zFar);
         vec3 inj_pLight     = pLightInj_tanSpace[i].xyz;
         float lightDis      = length(pLightInj_tanSpace[i]);
         float attenuation   = 1.0 / (lightDis * lightDis * pointLights[i].linear);   // at linear space
@@ -117,7 +115,7 @@ void main() {
 }
 
 
-vec2 parallaxFixedUV(vec3 view) {
+vec2 parallaxFixedUV(sampler2D parallaxTex, vec3 view) {
     float minLayers = 8;
     float maxLayers = 32;
 
@@ -126,15 +124,15 @@ vec2 parallaxFixedUV(vec3 view) {
     vec2 dUV = -view.xy / (nLayers * view.z) * 0.1;
 
     vec2 uv = fTexUV;
-    float depth = 1.0 - texture(texes.parallax0, uv).r;
+    float depth = 1.0 - texture(parallaxTex, uv).r;
     float z = 0.0;
     while (depth > z) {
         z += layerDepth;
         uv += dUV;
-        depth = 1.0 - texture(texes.parallax0, uv).r;
+        depth = 1.0 - texture(parallaxTex, uv).r;
     }
     vec2 prevUV = uv - dUV;
-    float prevDepth = 1.0 - texture(texes.parallax0, prevUV).r;
+    float prevDepth = 1.0 - texture(parallaxTex, prevUV).r;
     float d2 = prevDepth - (z - layerDepth);
     float d1 = z - depth;
     uv -= dUV * d1 / (d1 + d2);     // 线性插值
@@ -150,15 +148,15 @@ vec3 cubeSampleOffsets[20] = {
         vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
 };
 
-float pLightShadow(vec3 fPos, vec3 lightPos, samplerCube shadowMap, float zFar) {
+float pointLightShadow(samplerCube depthTex, vec3 fPos, vec3 lightPos, vec3 norm, float zFar) {
     vec3 injection = fPos - lightPos;
     float currDepth = length(injection);
 
     // PCF
-    float bias = max(0.04 * (1.0 - dot(fNormal, -normalize(injection))), 0.0003);
+    float bias = max(0.04 * (1.0 - dot(norm, -normalize(injection))), 0.0003);
     float shadow = 0;
     for (int i = 0; i < 20; ++i) {
-        float depth = texture(shadowMap, injection + cubeSampleOffsets[i] * 0.005).r;
+        float depth = texture(depthTex, injection + cubeSampleOffsets[i] * 0.005).r;
         depth *= zFar;
         shadow += (currDepth - bias) > depth ? 1.0 : 0.0;
     }
@@ -166,13 +164,13 @@ float pLightShadow(vec3 fPos, vec3 lightPos, samplerCube shadowMap, float zFar) 
 }
 
 
-float dLightShadow(vec4 fPosLSpace, vec3 lightInjction) {
+float directLightShadow(sampler2D depthTex, vec4 fPosLSpace, vec3 injction, vec3 norm) {
     vec3 projCoords = fPosLSpace.xyz / fPosLSpace.w;
     // 将坐标范围从[-1, 1]映射到[0, 1]
     projCoords = (projCoords + 1) * 0.5;
     float currDepth = projCoords.z;
-    float bias = max(0.001 * (1.0 - dot(fNormal, -lightInjction)), 0.0001);
-    vec2 texSize = textureSize(directLight.shadowMap, 0);
+    float bias = max(0.0001 * (1.0 - dot(norm, -normalize(injction))), 0.00001);
+    vec2 texSize = textureSize(depthTex, 0);
 
     float shadow = 0;
 
@@ -182,7 +180,7 @@ float dLightShadow(vec4 fPosLSpace, vec3 lightInjction) {
     float dy = 1 / texSize.y;
     for (int i = -offset; i <= offset; ++i) {
         for (int j = -offset; j <= offset; ++j) {
-            float depth = texture(directLight.shadowMap, vec2(projCoords.x + i * dx, projCoords.y + j * dy)).r;
+            float depth = texture(depthTex, vec2(projCoords.x + i * dx, projCoords.y + j * dy)).r;
             shadow += (currDepth - bias) > depth ? 1.0 : 0.0;
         }
     }

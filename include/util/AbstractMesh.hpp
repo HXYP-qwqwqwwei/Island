@@ -24,6 +24,7 @@ public:
     [[nodiscard]] Long getIndicesSize() const;
 //    AbstractMesh& addTexture(const Tex& texture);
     AbstractMesh& setTextures(const std::initializer_list<Tex>& textures);
+    AbstractMesh& setTextures(const std::vector<Tex>& textures);
     virtual void draw(const Shader& shader) const = 0;
 //    void setEnvironmentMap(GLuint cubeTex);
 //    void setShadowMap(GLuint shadowTex);
@@ -72,6 +73,13 @@ AbstractMesh<Vert, Tex>& AbstractMesh<Vert, Tex>::setTextures(const std::initial
     this->textures = _textures;
     return *this;
 }
+
+template<class Vert, class Tex>
+AbstractMesh<Vert, Tex>& AbstractMesh<Vert, Tex>::setTextures(const std::vector<Tex>& _textures) {
+    this->textures = _textures;
+    return *this;
+}
+
 
 template<class Vert, class Tex>
 void AbstractMesh<Vert, Tex>::setupMesh() {

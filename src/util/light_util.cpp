@@ -17,7 +17,7 @@ void setupPointLight(const Shader* shader, const PointLight& light, int idx) {
 
     glActiveTexture(GL_TEXTURE16 + idx);
     glBindTexture(GL_TEXTURE_CUBE_MAP, light.shadow);
-    shader->uniformInt(header + "shadowMap", 16 + idx);
+    shader->uniformInt(header + "depthTex", 16 + idx);
 }
 
 void setupPointLight(const Shader* shader, const PointLight& light) {
@@ -34,7 +34,7 @@ void setupDirectionalLight(const Shader* shader, const DirectionalLight& light) 
 
     glActiveTexture(GL_TEXTURE30);
     glBindTexture(GL_TEXTURE_2D, light.shadow);
-    shader->uniformInt("directLight.shadowMap", 30);
+    shader->uniformInt("directLight.depthTex", 30);
 }
 
 void setupLight(const Shader* shader, const Light& light) {

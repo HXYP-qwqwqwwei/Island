@@ -12,13 +12,13 @@
 #include "SkyBox.h"
 
 template<class T>
-using TexList = std::initializer_list<T>;
+using TexList = const std::initializer_list<T>&;
 
 namespace shapes {
     Model Cube(float len, TexList<Texture2D> textures = {});
     Model Rectangle(float w, float h, TexList<Texture2D> textures = {}, float maxU = 1, float maxV = 1);
     Model Ball(float radius, int segmentsXZ, int segmentsY);
-    Screen* ScreenRect(TexList<GLuint> tex);
+    Screen* ScreenRect(TexList<GLuint> tex = {});
     SkyBox* SkyBoxCube(GLuint texture);
 }
 

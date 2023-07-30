@@ -10,6 +10,7 @@
 #include "shaders.h"
 #include "light_util.h"
 #include "Model.h"
+#include "Screen.h"
 
 using PLight = PointLight;
 using DLight = DirectionalLight;
@@ -48,8 +49,9 @@ void renderPointShadow(const Model* model, const glm::mat4& transMtx, const PLig
 
 void renderPureColor(const Model* model, const glm::mat4* transMtx, size_t amount, glm::vec3 color);
 
-void renderGBuffer(const Model *model, const glm::mat4 *transMtx, size_t amount);
+void renderGBuffer(const Model *model, RenderType type, const Camera& camera, const glm::mat4 *transMtx, size_t amount);
 
+void processGBuffer(Screen* gScreen, const Camera& camera, Light light);
 
 
 #endif //ISLAND_MODEL_MANAGER_H

@@ -60,7 +60,7 @@ void compileShaders() {
 
     DeferredShader = new Shader();
     DeferredShader->loadShader("ScreenShader.vert", GL_VERTEX_SHADER);
-    DeferredShader->loadShader("DeferredScreen.frag", GL_FRAGMENT_SHADER);
+    DeferredShader->loadShader("DeferredShader.frag", GL_FRAGMENT_SHADER);
     DeferredShader->link();
 
 
@@ -137,6 +137,10 @@ const Shader* selectCubeShader(RenderType type) {
             return SimpleShader;
     }
 
+}
+
+const Shader *selectGBufferShader(RenderType type) {
+    return GBufferShader;
 }
 
 std::string Shader::TextureName(int type, int n) {

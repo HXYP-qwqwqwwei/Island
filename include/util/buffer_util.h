@@ -85,6 +85,7 @@ public:
 
     void bind() const;
     void unbind() const;
+    void blitDepth(const FrameBuffer& input, GLenum bits) const;
     [[nodiscard]] bool checkBuilt() const;
     [[nodiscard]] GLuint getDepthStencilTex() const;
     [[nodiscard]] GLuint getTexture(int i = 0) const;

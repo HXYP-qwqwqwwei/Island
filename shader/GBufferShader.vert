@@ -11,7 +11,6 @@ layout (std140, binding = 0) uniform Matrics {
 };
 
 out vec3 fPos;
-out vec3 fNormal;
 out vec2 fTexUV;
 out mat3 TBN;
 
@@ -20,14 +19,14 @@ void main() {
     vec4 posVec     = vModel * vec4(vPos, 1.0);
     gl_Position     = proj * view * posVec;
     mat3 model3x3   = mat3(vModel);
-    fPos     = posVec.xyz;
-    fNormal  = normalize(model3x3 * vNormal);
-    fTexUV   = vTexUV;
+    fPos    = posVec.xyz;
+    fTexUV  = vTexUV;
 
     // Tangent Space Transform
+    vec3 N = normalize(model3x3 * vNormal);
     vec3 T = model3x3 * vTangent;
-    T = normalize(T - dot(T, fNormal) * fNormal);   // Schmidt正交化
-    vec3 B = cross(fNormal, T);
+    T = normalize(T - dot(T, N) * N);   // Schmidt正交化
+    vec3 B = cross(N, T);
 
-    TBN = mat3(T, B, fNormal);
+    TBN = mat3(T, B, N);
 }

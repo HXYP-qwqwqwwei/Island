@@ -10,7 +10,6 @@
 #include "util/shapes.h"
 #include "util/Model.h"
 #include "util/texture_util.h"
-#include "util/Screen.h"
 #include "util/buffer_util.h"
 #include "util/render_util.h"
 #include "util/world.h"
@@ -107,31 +106,15 @@ int main() {
     FrameBuffer gBuffer(GameScrWidth, GameScrHeight);
     gBuffer.texture(RGB_FLOAT, 2)   // position & normals
             .texture(RGB_BYTE, 2)   // diffuse & specular
-            .depthBuffer().stencilBuffer().useRenderBuffer()
+            .depthBuffer().useRenderBuffer()
             .build();
 
-    Screen* screen = shapes::ScreenRect({
-        gBuffer.getTexture(0),
-        gBuffer.getTexture(1),
-        gBuffer.getTexture(2),
-        gBuffer.getTexture(3),
-    });
+    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight);
+    frameBuffer.texture(RGB_FLOAT, 2).depthBuffer().build();
 
 #elif defined(ISLAND_ENABLE_HDR)
     FrameBuffer frameBuffer(GameScrWidth, GameScrHeight);
     frameBuffer.texture(RGB_FLOAT, 2).depthBuffer().stencilBuffer().useRenderBuffer().build();
-    Screen* bright = shapes::ScreenRect({frameBuffer.getTexture(1)});
-    // For Bloom
-    FrameBuffer* pingPongBuffer[2];
-    Screen* blurredBright[2];
-    for (int i = 0; i < 2; ++i) {
-        auto* buffer = new FrameBuffer(GameScrWidth, GameScrHeight);
-        buffer->texture(RGB_FLOAT).build();
-        pingPongBuffer[i] = buffer;
-        blurredBright[1 - i] = shapes::ScreenRect({pingPongBuffer[i]->getTexture()});
-    }
-
-    Screen* screen = shapes::ScreenRect({frameBuffer.getTexture(), pingPongBuffer[0]->getTexture()});
 #else
     FrameBuffer frameBuffer(GameScrWidth, GameScrHeight, RGB_BYTE);
     frameBuffer.enableMSAA(RGB_BYTE | DEPTH | STENCIL, 4);
@@ -144,7 +127,7 @@ int main() {
     GLuint envMap = textures::EMPTY_ENV_MAP;
 
     InitWorld();
-    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(.0f), 4096);
+    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(0.0f), 4096);
     CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(30.0f), 4096);
     CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0), 4096);
     CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 4096);
@@ -207,9 +190,9 @@ int main() {
         ModelInfo grasses = MODEL_MANAGER.createInfo("grass");
         modelMtx = glm::mat4(1);
         grasses.addInstance({
-                glm::translate(modelMtx, glm::vec3(-1, 0, 0.5f)),
-                glm::translate(modelMtx, glm::vec3(1, 0, 0.5f))
-        });
+                                    glm::translate(modelMtx, glm::vec3(-1, 0, 0.5f)),
+                                    glm::translate(modelMtx, glm::vec3(1, 0, 0.5f))
+                            });
         PutModelInfo(CUTOUT, &grasses);
 
 //        ModelInfo rgb_windows = MODEL_MANAGER.createInfo("rgb_window");
@@ -229,15 +212,22 @@ int main() {
 //        });
 //        PutModelInfo(TRANSPARENT, &rgb_windows);
 
-#ifdef ISLAND_ENABLE_DEFERRED_SHADING
-        RenderWorldGBuffer(camera, gBuffer);
-        Flush();
-#else
+        /*================ Render World ================*/
+        SetupPVMatrix(camera);
         RenderShadow();
-//        glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-
-        RenderWorld(camera, frameBuffer);
-        Flush();
+#ifdef ISLAND_ENABLE_DEFERRED_SHADING
+        BindFrameBuffer(&gBuffer);
+        ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        EnableDepthTest();
+        RenderWorldGBuffer(camera, SOLID);
+        RenderWorldGBuffer(camera, CUTOUT);
+#else
+        BindFrameBuffer(&frameBuffer);
+        ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        EnableDepthTest();
+        RenderModelsInWorld(camera, SOLID);
+        RenderModelsInWorld(camera, CUTOUT);
+        RenderModelsInWorld(camera, PURE);
 #endif
 
         /*================ sky box ================*/
@@ -245,40 +235,28 @@ int main() {
 ////        SkyShader.uniformMatrix4fv(Shader::PROJECTION, proj);
 ////        SkyShader.uniformMatrix4fv("view", glm::mat4(glm::mat3(view)));
 ////        skyBox->draw(SkyShader);
-        /*================ Post-Production ================*/
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        glDisable(GL_DEPTH_TEST);
-
-
-
 
 #ifdef ISLAND_ENABLE_DEFERRED_SHADING
-        DeferredShader->use();
-        screen->draw(*DeferredShader);
-#elif defined(ISLAND_ENABLE_HDR)
-        GaussianBlurShader->use();
-        int gaussianLevels = 10;
-        bool horizontal = false;
-        GaussianBlurShader->uniformBool(Shader::GAUSSIAN_HORIZONTAL, horizontal);
-        pingPongBuffer[0]->bind();
-        bright->draw(*GaussianBlurShader);
-        int cycles = 2 * gaussianLevels - 1;
-        for (int i = 0; i < cycles; ++i) {
-            horizontal = !horizontal;
-            pingPongBuffer[horizontal]->bind();
-            GaussianBlurShader->uniformBool(Shader::GAUSSIAN_HORIZONTAL, horizontal);
-            blurredBright[horizontal]->draw(*GaussianBlurShader);
-        }
+        BindFrameBuffer(&frameBuffer);
+        ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        ProcessGBuffer(camera, gBuffer);
+        RenderModelsInWorld(camera, PURE);
+#endif
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        ScreenShaderHDR->use();
-        screen->draw(*ScreenShaderHDR);
+        /*================ Post-Production ================*/
+#ifdef ISLAND_ENABLE_HDR
+        GLuint blurredBright = Blur(1, 10);
+
+        BindFrameBuffer(nullptr);
+        SetScreenTextures({frameBuffer.getTexture(0), blurredBright});
+        DisableDepthTest();
+        ClearBuffer(GL_COLOR_BUFFER_BIT, 1.0, 1.0, 1.0);
+        RenderScreen();
 #else
         ScreenShader->use();
         screen->draw(*ScreenShader);
 #endif
-
+        Flush();
         glfwSwapBuffers(window);
         // 检查所有事件并更新窗口状态，否则窗口将无法响应外部输入（包括鼠标和键盘）
         glfwPollEvents();

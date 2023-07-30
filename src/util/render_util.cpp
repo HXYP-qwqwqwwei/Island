@@ -109,11 +109,20 @@ void renderPureColor(const Model* model, const glm::mat4* transMtx, size_t amoun
     model->draw(*shader, mtxBuf);
 }
 
-void renderGBuffer(const Model *model, const glm::mat4 *transMtx, size_t amount) {
-    const Shader* shader = GBufferShader;
+void renderGBuffer(const Model *model, RenderType type, const Camera& camera, const glm::mat4 *transMtx, size_t amount) {
+    const Shader* shader = selectGBufferShader(type);
     shader->use();
+    shader->uniformVec3(Shader::VIEW_POS, camera.getPos());
 
     Buffer mtxBuf(GL_ARRAY_BUFFER);
     mtxBuf.putData(amount * SZ_MAT4F, transMtx);
     model->draw(*shader, mtxBuf);
+}
+
+void processGBuffer(Screen* gScreen, const Camera& camera, Light light) {
+    const Shader* shader = DeferredShader;
+    shader->use();
+    shader->uniformVec3(Shader::VIEW_POS, camera.getPos());
+    setupLight(shader, light);
+    gScreen->draw(*shader);
 }
