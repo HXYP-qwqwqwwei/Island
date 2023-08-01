@@ -10,6 +10,7 @@
 class BuiltinMesh : public Mesh {
 public:
     BuiltinMesh& addVertex(float x, float y, float z, float u = 0, float v = 0);
+    BuiltinMesh& addVertex(glm::vec3 pos, glm::vec2 uv = {2, 2});
     BuiltinMesh& setNormal(float x, float y, float z);
     BuiltinMesh& setNormal(const glm::vec3& normal);
     BuiltinMesh& nextFace();

@@ -38,7 +38,7 @@ class Shader {
 private:
     const GLObject shaderProgram;
 
-    static void compileShader(const std::string& source, GLObject& shaderObject, GLenum type) ;
+    static bool compileShader(const std::string& source, GLObject& shaderObject, GLenum type) ;
     void attachShader(GLObject shader) const;
 
 public:
@@ -78,6 +78,7 @@ public:
 };
 
 
+extern Shader* VoidShader;
 extern Shader* SolidShader;
 extern Shader* SimpleShader;
 extern Shader* TransparentShader;
@@ -89,6 +90,7 @@ extern Shader* DepthShader;
 extern Shader* DepthCubeShader;
 extern Shader* GBufferShader;
 extern Shader* DeferredShader;
+extern Shader* DeferredPLightShader;
 
 
 extern Shader* GaussianBlurShader;

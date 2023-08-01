@@ -23,9 +23,7 @@ void UnbindAllTextures();
 
 void InitWorld() {
     glEnable(GL_STENCIL_TEST);
-    glEnable(GL_BLEND);
     glEnable(GL_CULL_FACE);
-    glBlendEquation(GL_FUNC_ADD);   // default
 
     for (auto & frame: PingPongFrames) {
         auto* buffer = new FrameBuffer(GameScrWidth, GameScrHeight);
@@ -65,13 +63,15 @@ void BindFrameBuffer(const FrameBuffer* frame) {
 }
 
 void ClearBuffer(int bits) {
-    glClearColor(DirectLight.ambient.r, DirectLight.ambient.g, DirectLight.ambient.b, 1.0F);
-    // 清除(上一帧的)颜色/深度测试/模板测试缓冲
-    glClear(bits);
+    ClearBuffer(bits, DirectLight.ambient.r, DirectLight.ambient.g, DirectLight.ambient.b);
 }
 
 void ClearBuffer(int bits, float r, float g, float b) {
     glClearColor(r, g, b, 1.0f);
+    if (bits & GL_STENCIL_BUFFER_BIT) {
+        glEnable(GL_STENCIL_TEST);
+        glStencilMask(0xFF);
+    }
     glClear(bits);
 }
 
@@ -281,6 +281,7 @@ void RenderShadow() {
     size_t amount = PointLights.size();
     for (size_t i = 0; i < amount; ++i) {
         const auto* shadowBuf = PointShadowBuffers[i];
+        if (shadowBuf == nullptr) continue;
         const auto* light = PointLights[i];
         glViewport(0, 0, shadowBuf->length, shadowBuf->length);
         shadowBuf->bind();
@@ -314,6 +315,17 @@ uint CreatePointLight(glm::vec3 pos, glm::vec3 color, GLsizei shadowRes, float l
 }
 
 
+uint CreatePointLightNoShadow(glm::vec3 pos, glm::vec3 color, float linear) {
+    uint id = PointLights.size();
+    auto* p = new PointLight{color, pos, linear, 0.1f, 25.0f, EMPTY_POINT_LIGHT.shadow};
+
+    PointShadowBuffers.push_back(nullptr);
+    PointLights.push_back(p);
+    return id;
+}
+
+
+
 void SetDirectLight(glm::vec3 injection, glm::vec3 color, GLsizei shadowRes, glm::vec3 ambient) {
     Camera dLightCamera(injection * -30.0f , -glm::normalize(injection));
     glm::mat4 dLightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.01f, 1000.0f);
@@ -331,6 +343,8 @@ void SetDirectLight(glm::vec3 injection, glm::vec3 color, GLsizei shadowRes, glm
 }
 
 void ProcessGBuffer(const Camera& camera, const FrameBuffer& gBuffer) {
+    static auto* ball = shapes::BallMesh(1, 20, 10);
+    static auto mesh = ball->build();
     if (BoundFrame == nullptr) {
         std::cerr << "ERROR::WORLD::Not Bound any Buffer\n";
         return;
@@ -341,8 +355,48 @@ void ProcessGBuffer(const Camera& camera, const FrameBuffer& gBuffer) {
         gBuffer.getTexture(2),
         gBuffer.getTexture(3),
     });
-    processGBuffer(screen, camera, Light{DirectLight, PointLights});
+    mesh.setTextures({
+         {gBuffer.getTexture(0)},
+         {gBuffer.getTexture(1)},
+         {gBuffer.getTexture(2)},
+         {gBuffer.getTexture(3)},
+    });
+
+
+    lightGBuffer(screen, camera, DirectLight);
     BoundFrame->blitDepth(gBuffer, GL_DEPTH_BUFFER_BIT);
+
+    if (PointLights.empty()) return;
+
+    glEnable(GL_STENCIL_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE);
+    glDepthMask(GL_FALSE);      // 禁止写入深度缓冲
+    for (const auto* pLight: PointLights) {
+        glClear(GL_STENCIL_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
+        glCullFace(GL_BACK);
+        glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);   // 剔除背面进行着色，注意即使没有通过深度测试，也要写入模板缓冲
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);
+        glStencilMask(0xFF);
+
+        lightGBuffer(&mesh, camera, *pLight);
+
+        glCullFace(GL_FRONT);
+        glDisable(GL_DEPTH_TEST);
+        glStencilMask(0x00);
+        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);    // 如果摄像机在球体内，上面的着色不会生效，但是模板缓冲值均为0，因此进行补着色
+
+        lightGBuffer(&mesh, camera, *pLight);
+
+        glStencilMask(0xFF);            // 清除模板缓冲值
+    }
+    glDisable(GL_BLEND);
+
+    glCullFace(GL_BACK);
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+    glStencilFunc(GL_ALWAYS, 1, 0xFF);
 }
 
 

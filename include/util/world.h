@@ -30,7 +30,7 @@ void RenderWorld(Camera& camera, FrameBuffer& frame);
 void EnableDepthTest(GLenum func = GL_LESS);
 void DisableDepthTest();
 
-void EnableStencilTest(GLenum func = GL_LESS);
+void EnableStencilTest(GLenum sFail);
 void DisableStencilTest();
 
 void RenderModelsInWorld(Camera& camera, RenderType type);
@@ -38,6 +38,7 @@ void SetupPVMatrix(Camera& camera, float zNear = 0.1f, float zFar = 100.0f);
 void RenderWorldGBuffer(Camera& camera, RenderType type);
 void RenderShadow();
 uint CreatePointLight(glm::vec3 pos, glm::vec3 color, GLsizei shadowRes, float linear = 1.0f, float zNear = 0.1f, float zFar = 25.0f);
+uint CreatePointLightNoShadow(glm::vec3 pos, glm::vec3 color, float linear = 1.0f);
 void SetDirectLight(glm::vec3 injection, glm::vec3 color, GLsizei shadowRes, glm::vec3 ambient = glm::vec3(0.01f));
 void ProcessGBuffer(const Camera& camera, const FrameBuffer& gBuffer);
 void RenderScreen(const FrameBuffer& frame, std::initializer_list<int> indices);

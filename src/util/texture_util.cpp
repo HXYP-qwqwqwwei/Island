@@ -31,7 +31,7 @@ void textures::loadDefaultTextures(const std::string& dir) {
     );
 
     EMPTY_SHADOW = load_cube_map(
-            {"pure_black_gray.png", "pure_black_gray.png", "pure_black_gray.png", "pure_black_gray.png", "pure_black_gray.png", "pure_black_gray.png"},
+            {"pure_white_gray.png", "pure_white_gray.png", "pure_white_gray.png", "pure_white_gray.png", "pure_white_gray.png", "pure_white_gray.png"},
             dir
     );
 

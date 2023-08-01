@@ -2,7 +2,6 @@
 // Created by 11739 on 2023/7/2.
 //
 
-#include <functional>
 #include "util/render_util.h"
 
 void ModelInfo::addInstance(glm::mat4 transMtx) {
@@ -119,10 +118,26 @@ void renderGBuffer(const Model *model, RenderType type, const Camera& camera, co
     model->draw(*shader, mtxBuf);
 }
 
-void processGBuffer(Screen* gScreen, const Camera& camera, Light light) {
+void lightGBuffer(Screen* gScreen, const Camera& camera, const DLight& light) {
     const Shader* shader = DeferredShader;
     shader->use();
     shader->uniformVec3(Shader::VIEW_POS, camera.getPos());
-    setupLight(shader, light);
+    setupDirectionalLight(shader, light);
     gScreen->draw(*shader);
+}
+
+void lightGBuffer(const Mesh* mesh, const Camera& camera, const PLight& light) {
+    const Shader* shader = DeferredPLightShader;
+    Model model({*mesh});
+    shader->use();
+    shader->uniformVec3(Shader::VIEW_POS, camera.getPos());
+    setupPointLight(shader, light);
+    glm::mat4 mtx(1.0);
+    mtx = glm::scale(mtx, glm::vec3(10.0));
+    mtx = glm::translate(mtx, light.pos * glm::vec3(1.0/10));
+
+    Buffer mtxBuf(GL_ARRAY_BUFFER);
+    mtxBuf.putData(SZ_MAT4F, &mtx);
+
+    model.draw(*shader, mtxBuf);
 }

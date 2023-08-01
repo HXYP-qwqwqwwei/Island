@@ -5,6 +5,8 @@
 #include "util/shaders.h"
 #include "assimp/material.h"
 
+
+Shader* VoidShader;
 Shader* SolidShader;
 Shader* SimpleShader;
 Shader* TransparentShader;
@@ -16,17 +18,22 @@ Shader* DepthShader;
 Shader* DepthCubeShader;
 Shader* GBufferShader;
 Shader* DeferredShader;
+Shader* DeferredPLightShader;
 
 Shader* GaussianBlurShader;
 
 
 
 void compileShaders() {
+    VoidShader = new Shader();
+    VoidShader->loadShader("VoidShader.vert", GL_VERTEX_SHADER);
+    VoidShader->loadShader("VoidShader.frag", GL_FRAGMENT_SHADER);
+    VoidShader->link();
+
     SolidShader = new Shader();
     SolidShader->loadShader("CompletedShader.vert", GL_VERTEX_SHADER);
     SolidShader->loadShader("SolidShader.frag", GL_FRAGMENT_SHADER);
     SolidShader->link();
-
 
     SimpleShader = new Shader();
     SimpleShader->loadShader("CompletedShader.vert", GL_VERTEX_SHADER);
@@ -60,8 +67,13 @@ void compileShaders() {
 
     DeferredShader = new Shader();
     DeferredShader->loadShader("ScreenShader.vert", GL_VERTEX_SHADER);
-    DeferredShader->loadShader("DeferredShader.frag", GL_FRAGMENT_SHADER);
+    DeferredShader->loadShader("DeferredDLightShader.frag", GL_FRAGMENT_SHADER);
     DeferredShader->link();
+
+    DeferredPLightShader = new Shader();
+    DeferredPLightShader->loadShader("DeferredPLightShader.vert", GL_VERTEX_SHADER);
+    DeferredPLightShader->loadShader("DeferredPLightShader.frag", GL_FRAGMENT_SHADER);
+    DeferredPLightShader->link();
 
 
     SkyShader = new Shader();
@@ -88,7 +100,7 @@ void compileShaders() {
 
 }
 
-void Shader::compileShader(const std::string& source, GLObject& shaderObject, GLenum type) {
+bool Shader::compileShader(const std::string& source, GLObject& shaderObject, GLenum type) {
     int success = 1;
     char infoLog[512];
     shaderObject = glCreateShader(type);
@@ -102,6 +114,7 @@ void Shader::compileShader(const std::string& source, GLObject& shaderObject, GL
         glGetShaderInfoLog(shaderObject, 512, nullptr, infoLog);
         std::cerr << "ERROR::SHADER::COMPILATION_FAILED\n" << infoLog << std::endl;
     }
+    return success;
 }
 
 const Shader* selectShader(RenderType type) {
@@ -188,7 +201,10 @@ void Shader::loadShader(const std::string& filename, GLenum type) {
     const std::string source((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
     input.close();
     GLObject shader;
-    compileShader(source, shader, type);
+    if(!compileShader(source, shader, type)) {
+        std::cerr << "File \"" << filename << "\" compile failed.\n";
+        return;
+    }
     this->attachShader(shader);
     glDeleteShader(shader);
 }

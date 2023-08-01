@@ -1,4 +1,5 @@
 #include <iostream>
+#include <random>
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
@@ -18,7 +19,7 @@ using GLObject = GLuint;
 using GLLoc = GLint;
 
 #define ISLAND_ENABLE_HDR
-//#define ISLAND_ENABLE_DEFERRED_SHADING
+#define ISLAND_ENABLE_DEFERRED_SHADING
 
 int main() {
     glfwInit();
@@ -81,7 +82,7 @@ int main() {
     Model nanoSuitModel("resources/nanosuit/nanosuit.obj");
     {
         auto cube           = [=]() -> Model {return shapes::Cube(1, {cubeDiff, cubeRefl, cubeSpec, cubeNorm});};
-        auto lightCube      = [=]() -> Model {return shapes::Cube(0.5f);};
+        auto lightCube      = [=]() -> Model {return shapes::Ball(0.1f, 20, 10);};
         auto woodenFloor    = [=]() -> Model {return shapes::Rectangle(16, 16, {floorDiff, floorSpec, floorNorm});};
         auto rgbWindow      = [=]() -> Model {return shapes::Rectangle(1, 1, {windowTexDiff});};
         auto grass          = [=]() -> Model {return shapes::Rectangle(1, 1, {grassDiff});};
@@ -110,7 +111,7 @@ int main() {
             .build();
 
     FrameBuffer frameBuffer(GameScrWidth, GameScrHeight);
-    frameBuffer.texture(RGB_FLOAT, 2).depthBuffer().build();
+    frameBuffer.texture(RGB_FLOAT, 2).depthBuffer().stencilBuffer().build();
 
 #elif defined(ISLAND_ENABLE_HDR)
     FrameBuffer frameBuffer(GameScrWidth, GameScrHeight);
@@ -123,15 +124,36 @@ int main() {
 
 
     double t0 = glfwGetTime();
+    double T0 = t0;
+    int nFrames = 0;
     Camera camera(initPos);
     GLuint envMap = textures::EMPTY_ENV_MAP;
 
     InitWorld();
     SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(0.0f), 4096);
-    CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(30.0f), 4096);
+    CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(10.0f), 4096);
     CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0), 4096);
     CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 4096);
     CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 4096);
+
+//    CreatePointLightNoShadow(glm::vec3(-3, 1, -3), glm::vec3(30.0f));
+//    CreatePointLightNoShadow(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0));
+//    CreatePointLightNoShadow(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0));
+//    CreatePointLightNoShadow(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f));
+
+//    std::random_device dev;
+//    std::mt19937 gen(dev());
+//    std::uniform_real_distribution<float> u(0, 20.0);
+//    time(nullptr);
+//    for (int i = -10; i <= 10; ++i) {
+//        for (int j = -10; j <= 10; ++j) {
+//            float r = u(gen);
+//            float g = u(gen);
+//            float b = u(gen);
+//            CreatePointLightNoShadow(glm::vec3(i*3, 1, j*3), glm::vec3(r, g, b));
+//        }
+//    }
+
 
     // render loop
     while (!glfwWindowShouldClose(window)) {
@@ -145,6 +167,13 @@ int main() {
         double t1 = glfwGetTime();
         gameSPF = static_cast<float>(t1 - t0);
         t0 = t1;
+        double T1 = t1;
+        nFrames += 1;
+        if ((Long)T1 != (Long)T0) {
+            std::cout << "FPS: " << (int)(nFrames / (T1 - T0)) << '\n';
+            nFrames = 0;
+            T0 = T1;
+        }
 
 //        pLight.pos = glm::vec3(3*cos(t1) - 1, 1, 3*sin(t1) - 1);
 
@@ -190,9 +219,9 @@ int main() {
         ModelInfo grasses = MODEL_MANAGER.createInfo("grass");
         modelMtx = glm::mat4(1);
         grasses.addInstance({
-                                    glm::translate(modelMtx, glm::vec3(-1, 0, 0.5f)),
-                                    glm::translate(modelMtx, glm::vec3(1, 0, 0.5f))
-                            });
+            glm::translate(modelMtx, glm::vec3(-1, 0, 0.5f)),
+            glm::translate(modelMtx, glm::vec3(1, 0, 0.5f))
+        });
         PutModelInfo(CUTOUT, &grasses);
 
 //        ModelInfo rgb_windows = MODEL_MANAGER.createInfo("rgb_window");
@@ -238,7 +267,7 @@ int main() {
 
 #ifdef ISLAND_ENABLE_DEFERRED_SHADING
         BindFrameBuffer(&frameBuffer);
-        ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         ProcessGBuffer(camera, gBuffer);
         RenderModelsInWorld(camera, PURE);
 #endif

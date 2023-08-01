@@ -7,9 +7,11 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+#include <functional>
 #include "shaders.h"
 #include "light_util.h"
 #include "Model.h"
+#include "BuiltinMesh.h"
 #include "Screen.h"
 
 using PLight = PointLight;
@@ -51,7 +53,8 @@ void renderPureColor(const Model* model, const glm::mat4* transMtx, size_t amoun
 
 void renderGBuffer(const Model *model, RenderType type, const Camera& camera, const glm::mat4 *transMtx, size_t amount);
 
-void processGBuffer(Screen* gScreen, const Camera& camera, Light light);
+void lightGBuffer(Screen* gScreen, const Camera& camera, const DLight& light);
 
+void lightGBuffer(const Mesh* mesh, const Camera& camera, const PLight& light);
 
 #endif //ISLAND_MODEL_MANAGER_H

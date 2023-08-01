@@ -43,6 +43,11 @@ BuiltinMesh &BuiltinMesh::addVertex(float x, float y, float z, float u, float v)
     return *this;
 }
 
+BuiltinMesh &BuiltinMesh::addVertex(glm::vec3 pos, glm::vec2 uv) {
+    return addVertex(pos.x, pos.y, pos.z, uv.x, uv.y);
+}
+
+
 BuiltinMesh &BuiltinMesh::setNormal(float x, float y, float z) {
     return this->setNormal(glm::vec3(x, y, z));
 }
@@ -62,6 +67,7 @@ Mesh BuiltinMesh::build() {
     this->setupMesh();
     return {this->vertices, this->indices, this->textures};
 }
+
 
 
 
