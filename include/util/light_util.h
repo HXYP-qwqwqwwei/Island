@@ -13,11 +13,10 @@
 #define MAX_PLIGHT_AMOUNT 4
 
 struct PointLight {
-    glm::vec3 color = glm::vec3(0.0f);
-    glm::vec3 pos = glm::vec3(0.0f);
-    float linear = 1;
-    float zNear = .1;
-    float zFar = 25.0;
+    glm::vec3 color     = glm::vec3(0.0f);
+    glm::vec3 pos       = glm::vec3(0.0f);
+    glm::vec3 attenu    = glm::vec3(1.0, 0.0, 1.0);    // attenuation coefficients
+    glm::vec2 zNearFar  = glm::vec2(0.1f, 25.0f);
     GLuint shadow;
 };
 

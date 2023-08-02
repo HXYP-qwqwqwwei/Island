@@ -76,7 +76,7 @@ void renderPointShadow(const Model* model, const glm::mat4* transMtx, size_t amo
     setupPointLight(shader, light);
     glm::vec3 eye = light.pos;
     // space matrices
-    glm::mat4 proj = glm::perspective(glm::radians(90.0f), 1.0f, light.zNear, light.zFar);
+    glm::mat4 proj = glm::perspective(glm::radians(90.0f), 1.0f, light.zNearFar.x, light.zNearFar.y);
     std::vector<glm::mat4> lightSpaceMats;
     lightSpaceMats.push_back(proj * glm::lookAt(eye, eye + glm::vec3( 1.0,  0.0,  0.0), glm::vec3(0.0, -1.0,  0.0)));
     lightSpaceMats.push_back(proj * glm::lookAt(eye, eye + glm::vec3(-1.0,  0.0,  0.0), glm::vec3(0.0, -1.0,  0.0)));
@@ -98,14 +98,25 @@ void renderPointShadow(const Model* model, const glm::mat4& transMtx, const PLig
     renderPointShadow(model, &transMtx, 1, light);
 }
 
-void renderPureColor(const Model* model, const glm::mat4* transMtx, size_t amount, glm::vec3 color) {
+void renderPureColor(const Model* model, const TransWithColor* trans, size_t amount) {
     const Shader* shader = selectShader(PURE);
     shader->use();
-
-    shader->uniformVec3(Shader::COLOR, color);
     Buffer mtxBuf(GL_ARRAY_BUFFER);
-    mtxBuf.putData(amount * SZ_MAT4F, transMtx);
-    model->draw(*shader, mtxBuf);
+    mtxBuf.putData(amount * sizeof(TransWithColor), trans);
+    model->drawWithColor(*shader, mtxBuf);
+}
+
+
+void renderLightModels(const Model* model, PLight const* const* lights, size_t amount) {
+    auto* trans = new TransWithColor[amount];
+    for (int i = 0; i < amount; ++i) {
+        auto light = lights[i];
+        static const glm::mat4 E(1.0);
+        trans[i].trans = glm::translate(E, light->pos);
+        trans[i].color = light->color;
+    }
+    renderPureColor(model, trans, amount);
+    delete[] trans;
 }
 
 void renderGBuffer(const Model *model, RenderType type, const Camera& camera, const glm::mat4 *transMtx, size_t amount) {
@@ -140,4 +151,37 @@ void lightGBuffer(const Mesh* mesh, const Camera& camera, const PLight& light) {
     mtxBuf.putData(SZ_MAT4F, &mtx);
 
     model.draw(*shader, mtxBuf);
+}
+
+void lightGBufferNoShadow(const Mesh* mesh, const Camera& camera, PLight const* const* lights, size_t amount) {
+    struct TransWithLight {
+        glm::mat4 trans;
+        glm::vec3 center;
+        glm::vec3 color;
+        glm::vec3 attenu;
+        glm::vec2 zNearFar;
+    };
+    auto* mats = new TransWithLight[amount];
+    for (int i = 0; i < amount; ++i) {
+        auto light = lights[i];
+        glm::mat4 mtx(1.0);
+        mtx = glm::scale(mtx, glm::vec3(10.0));
+        mtx = glm::translate(mtx, light->pos * glm::vec3(1.0/10));
+        mats[i].trans    = mtx;
+        mats[i].center   = light->pos;
+        mats[i].color    = light->color;
+        mats[i].attenu   = light->attenu;
+        mats[i].zNearFar = light->zNearFar;
+    }
+
+    const Shader* shader = DeferredPLNoShadowShader;
+    Model model({*mesh});
+    shader->use();
+    shader->uniformVec3(Shader::VIEW_POS, camera.getPos());
+
+    Buffer mtxBuf(GL_ARRAY_BUFFER);
+    mtxBuf.putData(sizeof(TransWithLight) * amount, mats);
+    delete[] mats;
+
+    model.drawLightArea(*shader, mtxBuf);
 }

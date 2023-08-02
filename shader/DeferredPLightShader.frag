@@ -14,8 +14,8 @@ layout (location = 1) out vec4 brightColor;
 struct PointLight {
     vec3 pos;
     vec3 color;
-    float linear;
-    float zFar;
+    vec3 attenu;
+    vec2 zNearFar;
     samplerCube depthTex;
 };
 
@@ -42,10 +42,13 @@ void main() {
 
     float shin = max(7.82e-3, 2.0);     // 0.00782 * 128 ~= 1
 
-    float pShadow = pointLightShadow(pointLight.depthTex, fPos, pointLight.pos, texNorm, pointLight.zFar);
+    float pShadow = pointLightShadow(pointLight.depthTex, fPos, pointLight.pos, texNorm, pointLight.zNearFar.y);
     vec3 inj_pLight = fPos - pointLight.pos;
     float dis = length(inj_pLight);
-    float attenuation = 1 / (dis * dis * pointLight.linear);
+    float Kc = pointLight.attenu.x;
+    float Kl = pointLight.attenu.y;
+    float Kq = pointLight.attenu.z;
+    float attenuation   = 1.0 / (Kc + Kl*dis + Kq*dis*dis);   // at linear space
     inj_pLight /= dis;
     vec3 diff_pLight = pointLight.color * (max(dot(-inj_pLight, texNorm), 0.0) * attenuation);
     diff_pLight *= (1.0 - pShadow);

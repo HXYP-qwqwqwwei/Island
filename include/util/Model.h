@@ -21,7 +21,9 @@ class Model {
 public:
     explicit Model(const char* path);
     explicit Model(const std::vector<Mesh>& meshes);
-    void draw(const Shader& shader, const Buffer& matrixBuffer) const;
+    void draw(const Shader& shader, const Buffer& transMats) const;
+    void drawLightArea(const Shader& shader, const Buffer& transWithLightInfo) const;
+    void drawWithColor(const Shader& shader, const Buffer& transWithColor) const;
 
 private:
     std::vector<Mesh> meshes;

@@ -7,6 +7,7 @@
 static std::unordered_map<RenderType, std::vector<const ModelInfo*>> Models;
 
 static std::vector<PointLight*> PointLights;
+static std::vector<PointLight*> PointLightsNoShadow;
 static std::vector<FrameBufferCube*> PointShadowBuffers;
 
 static DirectionalLight DirectLight;
@@ -83,12 +84,12 @@ void RenderModelsInWorld(Camera &camera, RenderType type) {
     const std::vector<const ModelInfo*>& models = Models[type];
     if (type == PURE) {
         ModelInfo lightCubes = MODEL_MANAGER.createInfo("light_cube");
-        glm::mat4 E(1.0f);
-        for (auto p: PointLights) {
-            glm::mat4 trans = glm::translate(E, p->pos);
-            renderPureColor(MODEL_MANAGER[lightCubes.id], &trans, 1, p->color);
+        if (!PointLights.empty()) {
+            renderLightModels(MODEL_MANAGER[lightCubes.id], &PointLights[0], PointLights.size());
         }
-
+        if (!PointLightsNoShadow.empty()) {
+            renderLightModels(MODEL_MANAGER[lightCubes.id], &PointLightsNoShadow[0], PointLightsNoShadow.size());
+        }
     } else {
         for (auto* info: models) {
             render(MODEL_MANAGER[info->id], type, camera, &info->transMatrices[0], info->transMatrices.size(), light);
@@ -181,7 +182,7 @@ void RenderWorld(Camera& camera, FrameBuffer& frame) {
     glm::mat4 E(1.0f);
     for (auto p: PointLights) {
         glm::mat4 trans = glm::translate(E, p->pos);
-        renderPureColor(MODEL_MANAGER[lightCubes.id], &trans, 1, p->color);
+        renderLightModels(MODEL_MANAGER[lightCubes.id], &p, 1);
     }
 
     // Normal Models
@@ -304,10 +305,10 @@ void UnbindAllTextures() {
 }
 
 
-uint CreatePointLight(glm::vec3 pos, glm::vec3 color, GLsizei shadowRes, float linear, float zNear, float zFar) {
+uint CreatePointLight(glm::vec3 pos, glm::vec3 color, GLsizei shadowRes, glm::vec3 attenu, glm::vec2 zNearFar) {
     uint id = PointLights.size();
     auto* shadowBuffer = new FrameBufferCube(shadowRes, DEPTH);
-    auto* p = new PointLight{color, pos, linear, zNear, zFar, shadowBuffer->getDepthCubeMap()};
+    auto* p = new PointLight{color, pos, attenu, zNearFar, shadowBuffer->getDepthCubeMap()};
 
     PointShadowBuffers.push_back(shadowBuffer);
     PointLights.push_back(p);
@@ -315,12 +316,11 @@ uint CreatePointLight(glm::vec3 pos, glm::vec3 color, GLsizei shadowRes, float l
 }
 
 
-uint CreatePointLightNoShadow(glm::vec3 pos, glm::vec3 color, float linear) {
+uint CreatePointLightNoShadow(glm::vec3 pos, glm::vec3 color, glm::vec3 attenu) {
     uint id = PointLights.size();
-    auto* p = new PointLight{color, pos, linear, 0.1f, 25.0f, EMPTY_POINT_LIGHT.shadow};
+    auto* p = new PointLight{color, pos, attenu, {0.1f, 25.0f}, EMPTY_POINT_LIGHT.shadow};
 
-    PointShadowBuffers.push_back(nullptr);
-    PointLights.push_back(p);
+    PointLightsNoShadow.push_back(p);
     return id;
 }
 
@@ -365,38 +365,52 @@ void ProcessGBuffer(const Camera& camera, const FrameBuffer& gBuffer) {
 
     lightGBuffer(screen, camera, DirectLight);
     BoundFrame->blitDepth(gBuffer, GL_DEPTH_BUFFER_BIT);
-
-    if (PointLights.empty()) return;
-
-    glEnable(GL_STENCIL_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE);
-    glDepthMask(GL_FALSE);      // 禁止写入深度缓冲
-    for (const auto* pLight: PointLights) {
-        glClear(GL_STENCIL_BUFFER_BIT);
-        glEnable(GL_DEPTH_TEST);
-        glCullFace(GL_BACK);
-        glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);   // 剔除背面进行着色，注意即使没有通过深度测试，也要写入模板缓冲
+
+    if (!PointLights.empty()) {
+        glEnable(GL_STENCIL_TEST);
+        glDepthMask(GL_FALSE);      // 禁止写入深度缓冲
+
+        for (const auto* pLight: PointLights) {
+            glClear(GL_STENCIL_BUFFER_BIT);
+            glEnable(GL_DEPTH_TEST);
+            glCullFace(GL_BACK);
+            glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);   // 剔除背面进行着色，注意即使没有通过深度测试，也要写入模板缓冲
+            glStencilFunc(GL_ALWAYS, 1, 0xFF);
+            glStencilMask(0xFF);
+
+            lightGBuffer(&mesh, camera, *pLight);
+
+            glCullFace(GL_FRONT);
+            glDisable(GL_DEPTH_TEST);
+            glStencilMask(0x00);
+            glStencilFunc(GL_NOTEQUAL, 1, 0xFF);    // 如果摄像机在球体内，上面的着色不会生效，但是模板缓冲值均为0，因此进行补着色
+
+            lightGBuffer(&mesh, camera, *pLight);
+
+            glStencilMask(0xFF);            // 清除模板缓冲值
+        }
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
-        glStencilMask(0xFF);
+    }
 
-        lightGBuffer(&mesh, camera, *pLight);
+//    glCullFace(GL_FRONT);
+//    glDisable(GL_DEPTH_TEST);
+//    for (const auto* pLight: PointLights) {
+//        lightGBuffer(&mesh, camera, *pLight);
+//    }
 
+    if (!PointLightsNoShadow.empty()) {
         glCullFace(GL_FRONT);
         glDisable(GL_DEPTH_TEST);
-        glStencilMask(0x00);
-        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);    // 如果摄像机在球体内，上面的着色不会生效，但是模板缓冲值均为0，因此进行补着色
-
-        lightGBuffer(&mesh, camera, *pLight);
-
-        glStencilMask(0xFF);            // 清除模板缓冲值
+        lightGBufferNoShadow(&mesh, camera, &PointLightsNoShadow[0], PointLightsNoShadow.size());
     }
+
     glDisable(GL_BLEND);
 
     glCullFace(GL_BACK);
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_TRUE);
-    glStencilFunc(GL_ALWAYS, 1, 0xFF);
 }
 
 

@@ -18,6 +18,11 @@ using PLight = PointLight;
 using DLight = DirectionalLight;
 class ModelManager;
 
+struct TransWithColor {
+    glm::mat4 trans;
+    glm::vec3 color;
+};
+
 struct ModelInfo {
     uint id;
     std::vector<glm::mat4> transMatrices;
@@ -49,12 +54,16 @@ void renderPointShadow(const Model* model, const glm::mat4* transMtx, size_t amo
 
 void renderPointShadow(const Model* model, const glm::mat4& transMtx, const PLight& light);
 
-void renderPureColor(const Model* model, const glm::mat4* transMtx, size_t amount, glm::vec3 color);
+void renderPureColor(const Model* model, const TransWithColor* trans, size_t amount);
+
+void renderLightModels(const Model* model, PLight const* const* lights, size_t amount);
 
 void renderGBuffer(const Model *model, RenderType type, const Camera& camera, const glm::mat4 *transMtx, size_t amount);
 
 void lightGBuffer(Screen* gScreen, const Camera& camera, const DLight& light);
 
 void lightGBuffer(const Mesh* mesh, const Camera& camera, const PLight& light);
+
+void lightGBufferNoShadow(const Mesh* mesh, const Camera& camera, PLight const* const* lights, size_t amount);
 
 #endif //ISLAND_MODEL_MANAGER_H

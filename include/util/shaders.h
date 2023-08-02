@@ -48,7 +48,7 @@ public:
     void link() const;
     void uniformMatrix4fv(const std::string& name, glm::mat4 matrix) const;
     void uniformVec3(const std::string& name, const glm::vec3& vec) const;
-    void uniformVec4(const std::string& name, const glm::vec4& vec) const;
+    void uniformVec2(const std::string& name, const glm::vec2& vec) const;
     void uniformFloat(const std::string& name, float fv) const;
     void uniformInt(const std::string& name, int iv) const;
     void uniformBool(const std::string& name, bool bv) const;
@@ -91,6 +91,7 @@ extern Shader* DepthCubeShader;
 extern Shader* GBufferShader;
 extern Shader* DeferredShader;
 extern Shader* DeferredPLightShader;
+extern Shader* DeferredPLNoShadowShader;
 
 
 extern Shader* GaussianBlurShader;

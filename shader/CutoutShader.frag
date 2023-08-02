@@ -24,8 +24,8 @@ struct Textures {
 struct PointLight {
     vec3 pos;
     vec3 color;
-    float linear;
-    float zFar;
+    vec3 attenu;
+    vec2 zNearFar;
     samplerCube depthTex;
 };
 
@@ -83,10 +83,13 @@ void main() {
 
     // point light
     for (int i = 0; i < 4; ++i) {
-        float pShadow       = pointLightShadow(pointLights[i].depthTex, fPos, pointLights[i].pos, texNorm, pointLights[i].zFar);
+        float pShadow       = pointLightShadow(pointLights[i].depthTex, fPos, pointLights[i].pos, texNorm, pointLights[i].zNearFar.y);
         vec3 inj_pLight     = pLightInj_tanSpace[i].xyz;
         float lightDis      = length(pLightInj_tanSpace[i]);
-        float attenuation   = 1.0 / (lightDis * lightDis * pointLights[i].linear);   // at linear space
+        float Kc = pointLights[i].attenu.x;
+        float Kl = pointLights[i].attenu.y;
+        float Kq = pointLights[i].attenu.z;
+        float attenuation   = 1.0 / (Kc + Kl*lightDis + Kq*lightDis*lightDis);   // at linear space
         vec3 pLightResult   = pointLights[i].color * attenuation;
         inj_pLight          = normalize(inj_pLight);
         vec3 diffuse_pLight = pLightResult * max(0.0f, dot(-inj_pLight, texNorm));

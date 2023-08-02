@@ -10,10 +10,10 @@ DirectionalLight EMPTY_DIRECTIONAL_LIGHT;
 void setupPointLight(const Shader* shader, const PointLight& light, int idx) {
     std::string header = "pointLights[";
     header += std::to_string(idx) + "].";
-    shader->uniformVec3( header + "pos",    light.pos);
-    shader->uniformVec3( header + "color",  light.color);
-    shader->uniformFloat(header + "linear", light.linear);
-    shader->uniformFloat(header + "zFar",   light.zFar);
+    shader->uniformVec3(header + "pos",         light.pos);
+    shader->uniformVec3(header + "color",       light.color);
+    shader->uniformVec3(header + "attenu",      light.attenu);
+    shader->uniformVec2(header + "zNearFar",    light.zNearFar);
 
     glActiveTexture(GL_TEXTURE16 + idx);
     glBindTexture(GL_TEXTURE_CUBE_MAP, light.shadow);
@@ -23,8 +23,8 @@ void setupPointLight(const Shader* shader, const PointLight& light, int idx) {
 void setupPointLight(const Shader* shader, const PointLight& light) {
     shader->uniformVec3( "pointLight.pos",      light.pos);
     shader->uniformVec3( "pointLight.color",    light.color);
-    shader->uniformFloat("pointLight.linear",   light.linear);
-    shader->uniformFloat("pointLight.zFar",     light.zFar);
+    shader->uniformVec3("pointLight.attenu",    light.attenu);
+    shader->uniformVec2("pointLight.zNearFar",  light.zNearFar);
 
     glActiveTexture(GL_TEXTURE16);
     glBindTexture(GL_TEXTURE_CUBE_MAP, light.shadow);

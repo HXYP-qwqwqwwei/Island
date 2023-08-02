@@ -136,7 +136,7 @@ int main() {
     CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 4096);
     CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 4096);
 
-//    CreatePointLightNoShadow(glm::vec3(-3, 1, -3), glm::vec3(30.0f));
+//    CreatePointLightNoShadow(glm::vec3(-3, 1, -3), glm::vec3(10.0f));
 //    CreatePointLightNoShadow(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0));
 //    CreatePointLightNoShadow(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0));
 //    CreatePointLightNoShadow(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f));

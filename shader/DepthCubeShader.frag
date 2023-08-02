@@ -9,7 +9,7 @@ struct Textures {
 
 struct PointLight {
     vec3 pos;
-    float zFar;
+    vec2 zNearFar;
 };
 
 uniform Textures texes;
@@ -23,6 +23,6 @@ void main() {
     }
 
     float dis = length(fPos.xyz - pointLight.pos);
-    dis /= pointLight.zFar;
+    dis /= pointLight.zNearFar.y;
     gl_FragDepth = dis;
 }

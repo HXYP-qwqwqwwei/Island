@@ -19,6 +19,8 @@ Shader* DepthCubeShader;
 Shader* GBufferShader;
 Shader* DeferredShader;
 Shader* DeferredPLightShader;
+Shader* DeferredPLNoShadowShader;
+
 
 Shader* GaussianBlurShader;
 
@@ -37,7 +39,7 @@ void compileShaders() {
 
     SimpleShader = new Shader();
     SimpleShader->loadShader("CompletedShader.vert", GL_VERTEX_SHADER);
-    SimpleShader->loadShader("SimpleShader.frag", GL_FRAGMENT_SHADER);
+    SimpleShader->loadShader("PureColorShader.frag", GL_FRAGMENT_SHADER);
     SimpleShader->link();
 
     TransparentShader = new Shader();
@@ -74,6 +76,11 @@ void compileShaders() {
     DeferredPLightShader->loadShader("DeferredPLightShader.vert", GL_VERTEX_SHADER);
     DeferredPLightShader->loadShader("DeferredPLightShader.frag", GL_FRAGMENT_SHADER);
     DeferredPLightShader->link();
+
+    DeferredPLNoShadowShader = new Shader();
+    DeferredPLNoShadowShader->loadShader("DeferredPLightNoShadow.vert", GL_VERTEX_SHADER);
+    DeferredPLNoShadowShader->loadShader("DeferredPLightNoShadow.frag", GL_FRAGMENT_SHADER);
+    DeferredPLNoShadowShader->link();
 
 
     SkyShader = new Shader();
@@ -231,9 +238,9 @@ void Shader::uniformVec3(const std::string &name, const glm::vec3& vec) const {
     glUniform3fv(loc, 1, glm::value_ptr(vec));
 }
 
-void Shader::uniformVec4(const std::string &name, const glm::vec4& vec) const {
+void Shader::uniformVec2(const std::string &name, const glm::vec2& vec) const {
     GLLoc loc = glGetUniformLocation(shaderProgram, name.c_str());
-    glUniform4fv(loc, 1, glm::value_ptr(vec));
+    glUniform2fv(loc, 1, glm::value_ptr(vec));
 }
 
 void Shader::uniformFloat(const std::string &name, float fv) const {
