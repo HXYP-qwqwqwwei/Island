@@ -246,8 +246,8 @@ int main() {
         RenderShadow();
 #ifdef ISLAND_ENABLE_DEFERRED_SHADING
         BindFrameBuffer(&gBuffer);
-        ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         EnableDepthTest();
+        ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         RenderWorldGBuffer(camera, SOLID);
         RenderWorldGBuffer(camera, CUTOUT);
 #else
@@ -274,13 +274,12 @@ int main() {
 
         /*================ Post-Production ================*/
 #ifdef ISLAND_ENABLE_HDR
-        GLuint blurredBright = Blur(1, 10);
+        Blur(1, 10);
 
         BindFrameBuffer(nullptr);
-        SetScreenTextures({frameBuffer.getTexture(0), blurredBright});
         DisableDepthTest();
         ClearBuffer(GL_COLOR_BUFFER_BIT, 1.0, 1.0, 1.0);
-        RenderScreen();
+        RenderFrame(frameBuffer, {0, 1});
 #else
         ScreenShader->use();
         screen->draw(*ScreenShader);

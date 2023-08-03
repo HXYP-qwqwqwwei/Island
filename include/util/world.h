@@ -23,7 +23,7 @@ extern ModelManager MODEL_MANAGER;
 void InitWorld();
 void PutModelInfo(RenderType type, const ModelInfo* modelInfo);
 void Flush();
-void BindFrameBuffer(const FrameBuffer* frame);
+void BindFrameBuffer(FrameBuffer* frame);
 void ClearBuffer(int bits);
 void ClearBuffer(int bits, float r, float g, float b);
 void RenderWorld(Camera& camera, FrameBuffer& frame);
@@ -41,12 +41,12 @@ uint CreatePointLight(glm::vec3 pos, glm::vec3 color, GLsizei shadowRes, glm::ve
 uint CreatePointLightNoShadow(glm::vec3 pos, glm::vec3 color, glm::vec3 attenu = {1, 0, 1});
 void SetDirectLight(glm::vec3 injection, glm::vec3 color, GLsizei shadowRes, glm::vec3 ambient = glm::vec3(0.01f));
 void ProcessGBuffer(const Camera& camera, const FrameBuffer& gBuffer);
-void RenderScreen(const FrameBuffer& frame, std::initializer_list<int> indices);
-void RenderScreen();
-void SetScreenTextures(const std::vector<GLuint>& textures);
-void SetScreenTextures(const std::initializer_list<GLuint>& textures);
+void RenderFrame(const FrameBuffer& frame, std::initializer_list<int> indices);
+//void RenderFrame();
+//void SetScreenTextures(const std::vector<GLuint>& textures);
+//void SetScreenTextures(const std::initializer_list<GLuint>& textures);
 
-GLuint Blur(int id, int level);
+void Blur(int index, int blurLevel);
 
 
 #endif //ISLAND_WORLD_H

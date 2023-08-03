@@ -483,3 +483,15 @@ void FrameBuffer::blitDepth(const FrameBuffer &input, GLenum bits) const {
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, this->object);
     glBlitFramebuffer(0, 0, input.width, input.height, 0, 0, width, height, bits, GL_NEAREST);
 }
+
+void exchangeColor(FrameBuffer *f1, FrameBuffer *f2, int i1, int i2) {
+    GLuint tex1 = f1->colors[i1];
+    GLuint tex2 = f2->colors[i2];
+    f1->colors[i1] = tex2;
+    f2->colors[i2] = tex1;
+
+    f1->bind();
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i1, GL_TEXTURE_2D, tex2, 0);
+    f2->bind();
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i2, GL_TEXTURE_2D, tex1, 0);
+}

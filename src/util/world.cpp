@@ -14,8 +14,8 @@ static DirectionalLight DirectLight;
 static FrameBuffer* DirectShadowBuffer = nullptr;
 
 static Buffer* PVMatBuffer;
-static const FrameBuffer* BoundFrame;
-static const FrameBuffer* PingPongFrames[2];
+static FrameBuffer* BoundFrame;
+static FrameBuffer* PingPongFrames[2];
 static Screen* screen;
 ModelManager MODEL_MANAGER;
 
@@ -48,7 +48,7 @@ void Flush() {
     Models.clear();
 }
 
-void BindFrameBuffer(const FrameBuffer* frame) {
+void BindFrameBuffer(FrameBuffer* frame) {
     if (frame == nullptr) {
         if (BoundFrame != nullptr) {
             BoundFrame->unbind();
@@ -414,7 +414,7 @@ void ProcessGBuffer(const Camera& camera, const FrameBuffer& gBuffer) {
 }
 
 
-void RenderScreen(const FrameBuffer& frame, std::initializer_list<int> indices) {
+void RenderFrame(const FrameBuffer& frame, std::initializer_list<int> indices) {
 
     auto getTex = [&](int id) -> GLuint { return frame.getTexture(id); };
 
@@ -431,13 +431,13 @@ void RenderScreen() {
 }
 
 
-GLuint Blur(int id, int level) {
+void Blur(int index, int blurLevel) {
     if (BoundFrame == nullptr) {
         std::cerr << "WARN::WORLD::Cannot blit when bound default frameBuffer\n";
-        return 0;
+        return;
     }
-    if (level == 0) return BoundFrame->getTexture(id);
-    GLuint tex = BoundFrame->getTexture(id);
+    if (blurLevel == 0) return;
+    GLuint tex = BoundFrame->getTexture(index);
 
 
     GaussianBlurShader->use();
@@ -448,7 +448,7 @@ GLuint Blur(int id, int level) {
     screen->setTextures({tex});
     screen->draw(*GaussianBlurShader);
 
-    int cycles = 2 * level - 1;
+    int cycles = 2 * blurLevel - 1;
     for (int i = 0; i < cycles; ++i) {
         screen->setTextures({PingPongFrames[horizontal]->getTexture()});
         horizontal = !horizontal;
@@ -456,8 +456,8 @@ GLuint Blur(int id, int level) {
         GaussianBlurShader->uniformBool(Shader::GAUSSIAN_HORIZONTAL, horizontal);
         screen->draw(*GaussianBlurShader);
     }
+    exchangeColor(BoundFrame, PingPongFrames[1], index);
     BoundFrame->bind();
-    return PingPongFrames[1]->getTexture();
 }
 
 void SetScreenTextures(const std::vector<GLuint> &textures) {
