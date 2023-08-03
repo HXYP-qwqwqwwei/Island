@@ -62,7 +62,7 @@ protected:
 //};
 class FrameBuffer;
 
-void exchangeColor(FrameBuffer* f1, FrameBuffer* f2, int i1 = 0, int i2 = 0);
+void swapTexture(FrameBuffer* f1, FrameBuffer* f2, int i1 = 0, int i2 = 0);
 
 class FrameBuffer {
 private:
@@ -73,7 +73,7 @@ private:
     bool depth      = false;
     bool stencil    = false;
     bool useRBO     = false;
-    friend void exchangeColor(FrameBuffer* f1, FrameBuffer* f2, int i1, int i2);
+    friend void swapTexture(FrameBuffer* f1, FrameBuffer* f2, int i1, int i2);
 
 public:
     const GLsizei width;

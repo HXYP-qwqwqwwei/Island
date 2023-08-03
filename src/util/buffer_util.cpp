@@ -484,7 +484,7 @@ void FrameBuffer::blitDepth(const FrameBuffer &input, GLenum bits) const {
     glBlitFramebuffer(0, 0, input.width, input.height, 0, 0, width, height, bits, GL_NEAREST);
 }
 
-void exchangeColor(FrameBuffer *f1, FrameBuffer *f2, int i1, int i2) {
+void swapTexture(FrameBuffer *f1, FrameBuffer *f2, int i1, int i2) {
     GLuint tex1 = f1->colors[i1];
     GLuint tex2 = f2->colors[i2];
     f1->colors[i1] = tex2;

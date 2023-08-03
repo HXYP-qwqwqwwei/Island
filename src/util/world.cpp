@@ -456,7 +456,7 @@ void Blur(int index, int blurLevel) {
         GaussianBlurShader->uniformBool(Shader::GAUSSIAN_HORIZONTAL, horizontal);
         screen->draw(*GaussianBlurShader);
     }
-    exchangeColor(BoundFrame, PingPongFrames[1], index);
+    swapTexture(BoundFrame, PingPongFrames[1], index);
     BoundFrame->bind();
 }
 
