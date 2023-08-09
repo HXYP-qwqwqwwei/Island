@@ -53,6 +53,7 @@ int main() {
     // Hide cursor
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
+    /**================ Load Models and Textures ================**/
     const std::string dir = "resources/textures";
     textures::loadDefaultTextures(dir);
     Texture2D cubeDiff = load_texture("container2.png", dir, aiTextureType_DIFFUSE);
@@ -101,7 +102,12 @@ int main() {
     // Sky box
     SkyBox* skyBox  = shapes::SkyBoxCube(skyBoxTex);
 
-    // Screen
+    /**================ Tools ================**/
+    std::mt19937 randGen(std::random_device{}());
+    std::uniform_real_distribution<float> u01(0, 1.0);
+
+
+    /**================ Init FrameBuffers ================**/
 #ifdef ISLAND_ENABLE_DEFERRED_SHADING
     // G-Buffer
     FrameBuffer gBuffer(GameScrWidth, GameScrHeight);
@@ -112,6 +118,40 @@ int main() {
 
     FrameBuffer frameBuffer(GameScrWidth, GameScrHeight);
     frameBuffer.texture(RGB_FLOAT, 2).depthBuffer().stencilBuffer().build();
+
+    // ssao
+    FrameBuffer ssaoFrame(GameScrWidth, GameScrHeight);
+
+    GLsizei nSamples = 64;
+    GLsizei noiseSize = 4;
+    std::vector<glm::vec3> ssaoSamples;
+    ssaoSamples.reserve(nSamples);
+    for (GLsizei i = 0; i < nSamples; ++i) {
+        glm::vec3 sample {
+                u01(randGen) * 2.0f - 1.0f,     // U(-1, 1)
+                u01(randGen) * 2.0f - 1.0f,     // U(-1, 1)
+                u01(randGen)                    // U(0, 1)
+        };
+        sample = glm::normalize(sample) * u01(randGen); // length -> U(0, 1);
+        GLfloat scale = GLfloat(i) / GLfloat(nSamples);
+        scale = std::lerp(0.1f, 1.0f, scale * scale);
+        ssaoSamples.push_back(scale * sample);
+    }
+
+    GLsizei noiPixels = noiseSize * noiseSize;
+    std::vector<glm::vec3> ssaoNoises;
+    ssaoNoises.reserve(noiPixels);
+    for (GLsizei i = 0; i < noiPixels; ++i) {
+        ssaoNoises.emplace_back(
+                u01(randGen) * 2.0f - 1.0f,
+                u01(randGen) * 2.0f - 1.0f,
+                0.0f
+        );
+    }
+
+    GLuint noiseTex = createTexture2D(GL_RGB, GL_RGB16F, GL_FLOAT, noiseSize, noiseSize, &ssaoNoises[0], GL_REPEAT, GL_NEAREST, false);
+
+
 
 #elif defined(ISLAND_ENABLE_HDR)
     FrameBuffer frameBuffer(GameScrWidth, GameScrHeight);
@@ -129,33 +169,30 @@ int main() {
     Camera camera(initPos);
     GLuint envMap = textures::EMPTY_ENV_MAP;
 
+    /**================ World and Lights ================**/
     InitWorld();
-    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(0.0f), 4096);
+    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(.0f), 4096, glm::vec3(.0));
     CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(10.0f), 4096);
     CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0), 4096);
     CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 4096);
     CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 4096);
-
+//
 //    CreatePointLightNoShadow(glm::vec3(-3, 1, -3), glm::vec3(10.0f));
 //    CreatePointLightNoShadow(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0));
 //    CreatePointLightNoShadow(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0));
 //    CreatePointLightNoShadow(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f));
 
-//    std::random_device dev;
-//    std::mt19937 gen(dev());
-//    std::uniform_real_distribution<float> u(0, 20.0);
-//    time(nullptr);
 //    for (int i = -10; i <= 10; ++i) {
 //        for (int j = -10; j <= 10; ++j) {
-//            float r = u(gen);
-//            float g = u(gen);
-//            float b = u(gen);
+//            float r = u01(randGen) * 20;
+//            float g = u01(randGen) * 20;
+//            float b = u01(randGen) * 20;
 //            CreatePointLightNoShadow(glm::vec3(i*3, 1, j*3), glm::vec3(r, g, b));
 //        }
 //    }
 
 
-    // render loop
+    /**================ Render Loop ================**/
     while (!glfwWindowShouldClose(window)) {
         // input
         // ...

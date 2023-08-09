@@ -363,7 +363,7 @@ void ProcessGBuffer(const Camera& camera, const FrameBuffer& gBuffer) {
     });
 
 
-    lightGBuffer(screen, camera, DirectLight);
+    lightGBuffer(screen, DirectLight);
     BoundFrame->blitDepth(gBuffer, GL_DEPTH_BUFFER_BIT);
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE);
@@ -380,14 +380,14 @@ void ProcessGBuffer(const Camera& camera, const FrameBuffer& gBuffer) {
             glStencilFunc(GL_ALWAYS, 1, 0xFF);
             glStencilMask(0xFF);
 
-            lightGBuffer(&mesh, camera, *pLight);
+            lightGBuffer(&mesh, *pLight);
 
             glCullFace(GL_FRONT);
             glDisable(GL_DEPTH_TEST);
             glStencilMask(0x00);
             glStencilFunc(GL_NOTEQUAL, 1, 0xFF);    // 如果摄像机在球体内，上面的着色不会生效，但是模板缓冲值均为0，因此进行补着色
 
-            lightGBuffer(&mesh, camera, *pLight);
+            lightGBuffer(&mesh, *pLight);
 
             glStencilMask(0xFF);            // 清除模板缓冲值
         }
@@ -403,7 +403,7 @@ void ProcessGBuffer(const Camera& camera, const FrameBuffer& gBuffer) {
     if (!PointLightsNoShadow.empty()) {
         glCullFace(GL_FRONT);
         glDisable(GL_DEPTH_TEST);
-        lightGBufferNoShadow(&mesh, camera, &PointLightsNoShadow[0], PointLightsNoShadow.size());
+        lightGBufferNoShadow(&mesh, &PointLightsNoShadow[0], PointLightsNoShadow.size());
     }
 
     glDisable(GL_BLEND);

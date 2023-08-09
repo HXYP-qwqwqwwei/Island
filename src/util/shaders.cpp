@@ -68,7 +68,7 @@ void compileShaders() {
     GBufferShader->link();
 
     DeferredShader = new Shader();
-    DeferredShader->loadShader("ScreenShader.vert", GL_VERTEX_SHADER);
+    DeferredShader->loadShader("DeferredDLightShader.vert", GL_VERTEX_SHADER);
     DeferredShader->loadShader("DeferredDLightShader.frag", GL_FRAGMENT_SHADER);
     DeferredShader->link();
 

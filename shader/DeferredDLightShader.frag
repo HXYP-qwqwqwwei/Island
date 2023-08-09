@@ -1,5 +1,7 @@
 #version 460 core
 in vec2 fTexUV;
+in mat4 view_inv;
+in vec3 dLightInj_viewSpace;
 
 uniform sampler2D texture0; // pos
 uniform sampler2D texture1; // norm
@@ -18,7 +20,6 @@ struct DirectLight {
 
 uniform DirectLight directLight;
 
-uniform vec3 viewPos;
 uniform mat4 lightSpaceMtx;
 
 float directLightShadow(sampler2D depthTex, vec4 fPosLSpace, vec3 injction, vec3 norm);
@@ -34,17 +35,20 @@ void main() {
 
     vec3 texSpec = texture(texture3, fTexUV).rgb;
 
-    vec3 view = normalize(viewPos - fPos);
+    float dShadow = directLightShadow(directLight.depthTex, lightSpaceMtx * view_inv * vec4(fPos, 1.0), directLight.injection, texNorm);
 
+    // Ambient
     vec3 ambient = directLight.ambient * texDiff;
 
-    float dShadow = directLightShadow(directLight.depthTex, lightSpaceMtx * vec4(fPos, 1.0), directLight.injection, texNorm);
-    vec3 inj_dLight  = normalize(directLight.injection);
+    // Diffuse
+    vec3 inj_dLight  = normalize(dLightInj_viewSpace);
     vec3 diff_dLight = directLight.color * max(0.0, dot(-inj_dLight, texNorm));
     diff_dLight *= (1.0 - dShadow);
 
+    // Specular
+    vec3 viewVec = normalize(-fPos);
     float shin          = max(7.82e-3, 2.0);     // 0.00782 * 128 ~= 1
-    vec3 halfway_dLight = normalize(view - inj_dLight);
+    vec3 halfway_dLight = normalize(viewVec - inj_dLight);
     vec3 spec_dLight    = directLight.color * pow(max(dot(halfway_dLight, texNorm), 0.0), shin * 128);
 
     vec3 specular = spec_dLight * texSpec;
@@ -66,7 +70,7 @@ float directLightShadow(sampler2D depthTex, vec4 fPosLSpace, vec3 injction, vec3
     // 将坐标范围从[-1, 1]映射到[0, 1]
     projCoords = (projCoords + 1.0) * 0.5;
     float currDepth = projCoords.z;
-    float bias = max(0.0001 * (1.0 - dot(norm, -normalize(injction))), 0.00001);
+    float bias = max(0.0001 * (1.0 - dot(mat3(view_inv) * norm, -normalize(injction))), 0.00001);
     vec2 texSize = textureSize(depthTex, 0);
 
     float shadow = 0;

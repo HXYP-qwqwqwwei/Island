@@ -45,7 +45,6 @@ void textures::loadDefaultTextures(const std::string& dir) {
 GLuint load_texture(const char* path, const std::string& directory, GLint warp, GLint filter, bool flipUV) {
     int width, height, nrChannels;
     std::string fullPath = directory + '/' + path;
-    GLuint id;
     stbi_set_flip_vertically_on_load(flipUV);
     unsigned char* data = stbi_load(fullPath.c_str(), &width, &height, &nrChannels, 0);
     if (data == nullptr) {
@@ -57,17 +56,26 @@ GLuint load_texture(const char* path, const std::string& directory, GLint warp, 
         stbi_image_free(data);
         return 0;
     }
+    GLuint id = createTexture2D(format, format, GL_UNSIGNED_BYTE, width, height, data, warp, filter, true);
+
+    stbi_image_free(data);
+    return id;
+}
+
+GLuint createTexture2D(GLint format, GLint internalFormat, GLenum type, int width, int height, const void *data, GLint warp,
+                       GLint filter, bool genMipmap) {
+    GLuint id;
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_2D, id);
-    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, data);
+
+    if (genMipmap)
+        glGenerateMipmap(GL_TEXTURE_2D);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, warp);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, warp);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
-
-    stbi_image_free(data);
     return id;
 }
 

@@ -18,7 +18,7 @@ uniform PointLight pointLight;
 
 void main() {
     vec4 texDiff = texture(texes.diffuse0, fTexUV);
-    if (texDiff.a == 0) {
+    if (texDiff.a < 0.05) {
         discard;
     }
 

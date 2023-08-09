@@ -23,8 +23,6 @@ in PointLight pointLight;
 
 uniform Textures texes;
 
-uniform vec3 viewPos;
-
 
 void main() {
     float gamma = 2.2;
@@ -37,10 +35,7 @@ void main() {
 
     vec3 texSpec = texture(texes.diffuse3, uv).rgb;
 
-    vec3 view = normalize(viewPos - fPos);
-
-    float shin = max(7.82e-3, 2.0);     // 0.00782 * 128 ~= 1
-
+    // Attenuation
     vec3 inj_pLight = fPos - pointLight.pos;
     float dis = length(inj_pLight);
     float Kc = pointLight.attenu.x;
@@ -48,9 +43,14 @@ void main() {
     float Kq = pointLight.attenu.z;
     float attenuation   = 1.0 / (Kc + Kl*dis + Kq*dis*dis);   // at linear space
     inj_pLight /= dis;
+
+    // Diffuse
     vec3 diff_pLight = pointLight.color * (max(dot(-inj_pLight, texNorm), 0.0) * attenuation);
 
-    vec3 halfway_pLight = normalize(view - inj_pLight);
+    // Specular
+    vec3 viewVec = normalize(-fPos);
+    float shin = max(7.82e-3, 2.0);     // 0.00782 * 128 ~= 1
+    vec3 halfway_pLight = normalize(viewVec - inj_pLight);
     vec3 spec_pLight = pointLight.color * (pow(max(dot(halfway_pLight, texNorm), 0.0), shin * 128) * attenuation);
 
     vec3 diffuse = diff_pLight * texDiff.rgb;

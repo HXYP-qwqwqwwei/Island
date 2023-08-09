@@ -7,6 +7,22 @@ layout (std140, binding = 0) uniform Matrics {
     mat4 proj;
 };
 
+struct PointLight {
+    vec3 pos;
+    vec3 color;
+    vec3 attenu;
+    vec2 zNearFar;
+    samplerCube depthTex;
+};
+
+uniform PointLight pointLight;
+
+out vec3 pLightPos_viewSpace;
+out mat3 world;
+
+
 void main() {
     gl_Position = proj * view * vModel * vec4(vPos, 1.0);
+    pLightPos_viewSpace = (view * vec4(pointLight.pos, 1.0)).xyz;
+    world = transpose(mat3(view));
 }

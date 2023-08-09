@@ -24,6 +24,6 @@ void main() {
     gl_Position     = proj * view * vModel * vec4(vPos, 1.0);
     pointLight.zNearFar = zNearFar;
     pointLight.color    = color;
-    pointLight.pos      = center;
+    pointLight.pos      = (view * vec4(center, 1.0)).xyz;
     pointLight.attenu   = attenu;
 }

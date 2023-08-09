@@ -19,10 +19,11 @@ struct PointLight {
     samplerCube depthTex;
 };
 
+in vec3 pLightPos_viewSpace;
+in mat3 world;
+
 uniform PointLight pointLight;
 uniform Textures texes;
-
-uniform vec3 viewPos;
 
 float pointLightShadow(samplerCube depthTex, vec3 fPos, vec3 lightPos, vec3 norm, float zFar);
 
@@ -38,22 +39,25 @@ void main() {
 
     vec3 texSpec = texture(texes.diffuse3, uv).rgb;
 
-    vec3 view = normalize(viewPos - fPos);
+    float pShadow = pointLightShadow(pointLight.depthTex, fPos, pLightPos_viewSpace, texNorm, pointLight.zNearFar.y);
 
-    float shin = max(7.82e-3, 2.0);     // 0.00782 * 128 ~= 1
-
-    float pShadow = pointLightShadow(pointLight.depthTex, fPos, pointLight.pos, texNorm, pointLight.zNearFar.y);
-    vec3 inj_pLight = fPos - pointLight.pos;
+    // Attenuation
+    vec3 inj_pLight = fPos - pLightPos_viewSpace;
     float dis = length(inj_pLight);
     float Kc = pointLight.attenu.x;
     float Kl = pointLight.attenu.y;
     float Kq = pointLight.attenu.z;
     float attenuation   = 1.0 / (Kc + Kl*dis + Kq*dis*dis);   // at linear space
     inj_pLight /= dis;
+
+    // Diffuse
     vec3 diff_pLight = pointLight.color * (max(dot(-inj_pLight, texNorm), 0.0) * attenuation);
     diff_pLight *= (1.0 - pShadow);
 
-    vec3 halfway_pLight = normalize(view - inj_pLight);
+    // Specular
+    vec3 viewVec = normalize(-fPos);
+    float shin = max(7.82e-3, 2.0);     // 0.00782 * 128 ~= 1
+    vec3 halfway_pLight = normalize(viewVec - inj_pLight);
     vec3 spec_pLight = pointLight.color * (pow(max(dot(halfway_pLight, texNorm), 0.0), shin * 128) * attenuation);
     spec_pLight *= (1.0 - pShadow);
 
@@ -80,11 +84,11 @@ vec3 cubeSampleOffsets[20] = {
 };
 
 float pointLightShadow(samplerCube depthTex, vec3 fPos, vec3 lightPos, vec3 norm, float zFar) {
-    vec3 injection = fPos - lightPos;
+    vec3 injection = world * (fPos - lightPos);
     float currDepth = length(injection);
 
+    float bias = max(0.06 * (1.0 - dot(world * norm, -normalize(injection))), 0.002);
     // PCF
-    float bias = max(0.04 * (1.0 - dot(norm, -normalize(injection))), 0.0003);
     float shadow = 0;
     for (int i = 0; i < 20; ++i) {
         float depth = texture(depthTex, injection + cubeSampleOffsets[i] * 0.005).r;

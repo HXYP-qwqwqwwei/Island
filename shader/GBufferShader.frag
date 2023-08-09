@@ -4,10 +4,10 @@ in vec3 fPos;
 in vec2 fTexUV;
 in mat3 TBN;
 
-layout (location = 0) out vec4 gPos;
-layout (location = 1) out vec4 gNorm;
-layout (location = 2) out vec4 gDiff;
-layout (location = 3) out vec4 gSpec;
+layout (location = 0) out vec3 gPos;
+layout (location = 1) out vec3 gNorm;
+layout (location = 2) out vec3 gDiff;
+layout (location = 3) out vec3 gSpec;
 
 struct Textures {
     sampler2D diffuse0;
@@ -19,25 +19,25 @@ struct Textures {
 };
 
 uniform Textures texes;
-uniform vec3 viewPos;
 
 vec2 parallaxFixedUV(sampler2D parallaxTex, vec3 view);
 
 void main() {
-    gPos  = vec4(fPos, 1.0);
+    gPos  = fPos;
 
-    vec3 view_tanSpace = transpose(TBN) * normalize(viewPos - fPos);
+    vec3 view_tanSpace = transpose(TBN) * normalize(-fPos);
     vec2 fixedUV = parallaxFixedUV(texes.parallax0, view_tanSpace);
 
-    gDiff = texture(texes.diffuse0, fixedUV);
-    if (gDiff.a < 0.05) {
+    vec4 diff = texture(texes.diffuse0, fixedUV);
+    if (diff.a < 0.05) {
         discard;
     }
+    gDiff = diff.rgb;
 
     vec3 norm = texture(texes.normals0, fixedUV).rgb;
     norm  = 2.0 * norm - 1.0;
-    gNorm = vec4(normalize(TBN * norm), 1.0);
-    gSpec = vec4(texture(texes.specular0, fixedUV).rgb, 1.0);
+    gNorm = normalize(TBN * norm);
+    gSpec = texture(texes.specular0, fixedUV).rgb;
 }
 
 

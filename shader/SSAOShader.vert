@@ -10,24 +10,17 @@ layout (std140, binding = 0) uniform Matrics {
     mat4 proj;
 };
 
-out vec3 fPos;      // view space
+out vec3 fPos_viewSpace;
 out vec2 fTexUV;
-out mat3 TBN;
 
-
+// 观察空间
 void main() {
-    fTexUV  = vTexUV;
-
     mat4 ViewModel  = view * vModel;
     vec4 posVec     = ViewModel * vec4(vPos, 1.0);
     gl_Position     = proj * posVec;
-    fPos    = posVec.xyz;
+    fPos_viewSpace  = posVec.xyz;
+    fTexUV          = vTexUV;
 
-    // Tangent Space Transform
-    mat3 normalMtx  = mat3(ViewModel);
-    vec3 N = normalize(normalMtx * vNormal);
-    vec3 T = normalMtx * vTangent;
-    T = normalize(T - dot(T, N) * N);   // Schmidt正交化
-    vec3 B = cross(N, T);
-    TBN = mat3(T, B, N);
+    mat3 normalMtx  = mat3(transpose(inverse(ViewModel)));
+    vec3 N = normalMtx * vNormal;
 }

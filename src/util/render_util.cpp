@@ -122,26 +122,23 @@ void renderLightModels(const Model* model, PLight const* const* lights, size_t a
 void renderGBuffer(const Model *model, RenderType type, const Camera& camera, const glm::mat4 *transMtx, size_t amount) {
     const Shader* shader = selectGBufferShader(type);
     shader->use();
-    shader->uniformVec3(Shader::VIEW_POS, camera.getPos());
 
     Buffer mtxBuf(GL_ARRAY_BUFFER);
     mtxBuf.putData(amount * SZ_MAT4F, transMtx);
     model->draw(*shader, mtxBuf);
 }
 
-void lightGBuffer(Screen* gScreen, const Camera& camera, const DLight& light) {
+void lightGBuffer(Screen *gScreen, const DLight &light) {
     const Shader* shader = DeferredShader;
     shader->use();
-    shader->uniformVec3(Shader::VIEW_POS, camera.getPos());
     setupDirectionalLight(shader, light);
     gScreen->draw(*shader);
 }
 
-void lightGBuffer(const Mesh* mesh, const Camera& camera, const PLight& light) {
+void lightGBuffer(const Mesh *mesh, const PLight &light) {
     const Shader* shader = DeferredPLightShader;
     Model model({*mesh});
     shader->use();
-    shader->uniformVec3(Shader::VIEW_POS, camera.getPos());
     setupPointLight(shader, light);
     glm::mat4 mtx(1.0);
     mtx = glm::scale(mtx, glm::vec3(10.0));
@@ -153,7 +150,7 @@ void lightGBuffer(const Mesh* mesh, const Camera& camera, const PLight& light) {
     model.draw(*shader, mtxBuf);
 }
 
-void lightGBufferNoShadow(const Mesh* mesh, const Camera& camera, PLight const* const* lights, size_t amount) {
+void lightGBufferNoShadow(const Mesh *mesh, PLight const *const *lights, size_t amount) {
     struct TransWithLight {
         glm::mat4 trans;
         glm::vec3 center;
@@ -177,7 +174,6 @@ void lightGBufferNoShadow(const Mesh* mesh, const Camera& camera, PLight const* 
     const Shader* shader = DeferredPLNoShadowShader;
     Model model({*mesh});
     shader->use();
-    shader->uniformVec3(Shader::VIEW_POS, camera.getPos());
 
     Buffer mtxBuf(GL_ARRAY_BUFFER);
     mtxBuf.putData(sizeof(TransWithLight) * amount, mats);
