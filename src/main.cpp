@@ -112,7 +112,7 @@ int main() {
     // G-Buffer
     FrameBuffer gBuffer(GameScrWidth, GameScrHeight);
     gBuffer.texture(RGBA_FLOAT)     // position & depth
-            .texture(RGB_BYTE)      // specular
+            .texture(RGB_FLOAT)      // specular
             .texture(RGB_BYTE, 2)   // diffuse & specular
             .depthBuffer().useRenderBuffer()
             .build();
@@ -174,11 +174,11 @@ int main() {
     /**================ World and Lights ================**/
     InitWorld();
     SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(.0f), 4096, glm::vec3(1.0));
-//    CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(10.0f), 4096);
-//    CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0), 4096);
-//    CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 4096);
-//    CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 4096);
-//
+    CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(10.0f), 4096);
+    CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0), 4096);
+    CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 4096);
+    CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 4096);
+
 //    CreatePointLightNoShadow(glm::vec3(-3, 1, -3), glm::vec3(10.0f));
 //    CreatePointLightNoShadow(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0));
 //    CreatePointLightNoShadow(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0));
