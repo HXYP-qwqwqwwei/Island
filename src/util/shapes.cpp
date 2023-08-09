@@ -52,26 +52,71 @@ Model shapes::Rectangle(float w, float h, TexList<Texture2D> textures, float max
     return Model({rect.build()});
 }
 
-//Mesh* shapes::Ball(float radius, int segmentsXZ, int segmentsY) {
-//    std::vector<Vertex3DNoTex> vertices;
-//    std::vector<uint> indices;
-//    float dAlpha = AI_MATH_PI / segmentsY;
-//    float dBeta = AI_MATH_TWO_PI / segmentsXZ;
-//    for (int i = 1; i < segmentsY; ++i) {
-//        for (int j = 1; j < segmentsXZ; ++j) {
-//            float alpha = dAlpha * (float)i;
-//            float beta = dBeta * (float)j;
-//            float y = radius * glm::cos(alpha);
-//            float r = radius * glm::sin(alpha);
-//            float x = r * glm::sin(beta);
-//            float z = r * glm::cos(beta);
-//            vertices.push_back({
-//                glm::vec3(x, y, z),
-//                glm::vec3(x, y, z)
-//            });
-//        }
-//    }
-//}
+BuiltinMesh* shapes::BallMesh(float radius, int segmentsXZ, int segmentsY) {
+    std::vector<glm::vec3> positions;
+
+    // vertex positions
+    float dAlpha = AI_MATH_PI / segmentsY;
+    float dBeta = AI_MATH_TWO_PI / segmentsXZ;
+    glm::vec3 top(0, +radius, 0);
+    glm::vec3 bot(0, -radius, 0);
+    for (int i = 1; i < segmentsY; ++i) {
+        float alpha = dAlpha * (float)i;
+        float y = radius * glm::cos(alpha);
+        for (int j = 0; j < segmentsXZ; ++j) {
+            float beta = -dBeta * (float)j;
+            float r = radius * glm::sin(alpha);
+            float x = r * glm::cos(beta);
+            float z = r * glm::sin(beta);
+            positions.emplace_back(x, y, z);
+        }
+    }
+
+    BuiltinMesh& ball = *(new BuiltinMesh);
+
+    // top
+    for (int i = 0; i < segmentsXZ; ++i) {
+        ball.addVertex(top)
+            .addVertex(positions[i])
+            .addVertex(positions[(i+1) % segmentsXZ])
+            .nextFace();
+    }
+
+    for (int i = 0; i < segmentsY-2; ++i) {
+        int first1 = i * segmentsXZ;
+        int first2 = first1 + segmentsXZ;
+        for (int j = 0; j < segmentsXZ; ++j) {
+            int v1 = first1 + j, v2 = (j+1) % segmentsXZ + first1;
+            int w1 = first2 + j, w2 = (j+1) % segmentsXZ + first2;
+            ball.addVertex(positions[v1])   /*  v1   v2 */
+                .addVertex(positions[w1])   /*  |  \    */
+                .addVertex(positions[w2])   /*  w1—— w2 */
+                .nextFace()
+                .addVertex(positions[v1])   /*  v1 ——v2 */
+                .addVertex(positions[w2])   /*     \  | */
+                .addVertex(positions[v2])   /*  w1   w2 */
+                .nextFace();
+        }
+    }
+
+    // bottom
+    int first = (segmentsY-2) * segmentsXZ;
+    for (int i = 0; i < segmentsXZ; ++i) {
+        ball.addVertex(positions[first + i])
+            .addVertex(bot)
+            .addVertex(positions[first + (i+1) % segmentsXZ])
+            .nextFace();
+    }
+    return &ball;
+}
+
+Model shapes::Ball(float radius, int segmentsXZ, int segmentsY) {
+    auto mesh = BallMesh(radius, segmentsXZ, segmentsY);
+    Model ball({mesh->build()});
+    delete mesh;
+    return ball;
+}
+
 
 
 Screen* shapes::ScreenRect(TexList<GLuint> tex) {

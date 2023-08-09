@@ -1,6 +1,5 @@
 #version 460 core
 
-//out vec4 fragColor;
 in vec2 fTexUV;
 
 
@@ -15,5 +14,4 @@ void main() {
     if (texDiff.a == 0) {
         discard;
     }
-//    fragColor = vec4(vec3(gl_FragCoord.z), 1.0);
 }

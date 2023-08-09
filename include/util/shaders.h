@@ -30,7 +30,7 @@ enum RenderType {
     TRANSPARENT,
     SCREEN,
     SHADOW,
-    PURE
+    PURE,
 };
 
 
@@ -38,7 +38,7 @@ class Shader {
 private:
     const GLObject shaderProgram;
 
-    static void compileShader(const std::string& source, GLObject& shaderObject, GLenum type) ;
+    static bool compileShader(const std::string& source, GLObject& shaderObject, GLenum type) ;
     void attachShader(GLObject shader) const;
 
 public:
@@ -48,7 +48,7 @@ public:
     void link() const;
     void uniformMatrix4fv(const std::string& name, glm::mat4 matrix) const;
     void uniformVec3(const std::string& name, const glm::vec3& vec) const;
-    void uniformVec4(const std::string& name, const glm::vec4& vec) const;
+    void uniformVec2(const std::string& name, const glm::vec2& vec) const;
     void uniformFloat(const std::string& name, float fv) const;
     void uniformInt(const std::string& name, int iv) const;
     void uniformBool(const std::string& name, bool bv) const;
@@ -56,14 +56,18 @@ public:
     void setEnvironmentMap(GLuint envMap) const;
 
     /*===== Uniform names =====*/
-    static constexpr const char MODEL[] = "model";
-    static constexpr const char LIGHT_SPACE_MATRIX[] = "lightSpaceMatrix";
-    static constexpr const char VIEW_POS[] = "viewPos";
-    static constexpr const char COLOR[] = "color";
-    static constexpr const char GAUSSIAN_HORIZONTAL[] = "horizontal";
-    static constexpr const char SHININESS[] = "texes.shininess";
-    static constexpr const char TEXTURES[] = "texes.";
-    static constexpr const char ENVIRONMENT_MAP[] = "environment";
+//    static constexpr const char MODEL[]                 = "model";
+    static constexpr const char LIGHT_SPACE_MATRIX[]    = "lightSpaceMtx";
+    static constexpr const char VIEW_POS[]              = "viewPos";
+    static constexpr const char COLOR[]                 = "color";
+    static constexpr const char GAUSSIAN_HORIZONTAL[]   = "horizontal";
+    static constexpr const char SHININESS[]             = "texes.shininess";
+    static constexpr const char TEXTURES[]              = "texes.";
+    static constexpr const char ENVIRONMENT_MAP[]       = "environment";
+    static constexpr const char SSAO_SAMPLES[]          = "samples[";
+    static constexpr const char SSAO_KERNEL_RADIUS[]    = "radius";
+    static constexpr const char SSAO_POWER[]            = "power";
+    static constexpr const char SCREEN_SIZE[]           = "screenSize";
 //    static constexpr const char PROJECTION[] = "proj";
     static constexpr const char CUBE_SPACE_MATRICES[6][21] = {
             "cubeSpaceMatrices[0]",
@@ -78,6 +82,7 @@ public:
 };
 
 
+extern Shader* VoidShader;
 extern Shader* SolidShader;
 extern Shader* SimpleShader;
 extern Shader* TransparentShader;
@@ -87,6 +92,12 @@ extern Shader* ScreenShaderHDR;
 extern Shader* SkyShader;
 extern Shader* DepthShader;
 extern Shader* DepthCubeShader;
+extern Shader* GBufferShader;
+extern Shader* DeferredShader;
+extern Shader* DeferredPLightShader;
+extern Shader* DeferredPLNoShadowShader;
+extern Shader* SSAOShader;
+
 
 extern Shader* GaussianBlurShader;
 
@@ -94,5 +105,6 @@ extern Shader* GaussianBlurShader;
 void compileShaders();
 const Shader* selectShader(RenderType type);
 const Shader* selectCubeShader(RenderType type);
+const Shader* selectGBufferShader(RenderType type);
 
 #endif //ISLAND_SHADERS_H

@@ -59,6 +59,8 @@ namespace textures {
     void loadDefaultTextures(const std::string& dir);
 }
 
+GLuint createTexture2D(GLint format, GLint internalFormat, GLenum type, int width, int height, const void *data, GLint warp,
+                       GLint filter, bool genMipmap);
 GLint tex_format(int nrChannels);
 GLuint load_texture(const char* path, const std::string& directory, GLint warp = GL_REPEAT, GLint filter = GL_LINEAR, bool flipUV = true);
 GLuint load_cube_map(std::initializer_list<std::string> paths, const std::string& directory, bool flipUV = false);

@@ -70,6 +70,7 @@ void Mesh::setupTextures(const Shader &shader) const {
         i += 1;
     }
     glActiveTexture(GL_TEXTURE0);
+//    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 

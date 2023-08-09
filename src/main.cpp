@@ -1,4 +1,5 @@
 #include <iostream>
+#include <random>
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
@@ -10,7 +11,6 @@
 #include "util/shapes.h"
 #include "util/Model.h"
 #include "util/texture_util.h"
-#include "util/Screen.h"
 #include "util/buffer_util.h"
 #include "util/render_util.h"
 #include "util/world.h"
@@ -19,6 +19,7 @@ using GLObject = GLuint;
 using GLLoc = GLint;
 
 #define ISLAND_ENABLE_HDR
+#define ISLAND_ENABLE_DEFERRED_SHADING
 
 int main() {
     glfwInit();
@@ -38,6 +39,7 @@ int main() {
         std::cerr << "Failed to initialize GLAD\n";
         return -1;
     }
+    glGetError();
 
     // compile Shader programs
     compileShaders();
@@ -51,6 +53,7 @@ int main() {
     // Hide cursor
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
+    /**================ Load Models and Textures ================**/
     const std::string dir = "resources/textures";
     textures::loadDefaultTextures(dir);
     Texture2D cubeDiff = load_texture("container2.png", dir, aiTextureType_DIFFUSE);
@@ -58,8 +61,6 @@ int main() {
     Texture2D cubeRefl = load_texture("container2_specular.png", dir, aiTextureType_REFLECTION);
     Texture2D cubeNorm = load_texture("container2_normals.png", dir, aiTextureType_NORMALS);
 
-    std::string s = std::to_string(1.234);
-    std::reverse(s.begin(), s.end());
 
     Texture2D toyBoxDiff = load_texture("toy_box_diffuse.png", dir, aiTextureType_DIFFUSE);
     Texture2D toyBoxSpec = {textures::WHITE_RGB, aiTextureType_SPECULAR};
@@ -82,11 +83,11 @@ int main() {
     Model nanoSuitModel("resources/nanosuit/nanosuit.obj");
     {
         auto cube           = [=]() -> Model {return shapes::Cube(1, {cubeDiff, cubeRefl, cubeSpec, cubeNorm});};
-        auto lightCube      = [=]() -> Model {return shapes::Cube(0.5f);};
+        auto lightCube      = [=]() -> Model {return shapes::Ball(0.1f, 20, 10);};
         auto woodenFloor    = [=]() -> Model {return shapes::Rectangle(16, 16, {floorDiff, floorSpec, floorNorm});};
         auto rgbWindow      = [=]() -> Model {return shapes::Rectangle(1, 1, {windowTexDiff});};
         auto grass          = [=]() -> Model {return shapes::Rectangle(1, 1, {grassDiff});};
-        auto toyBox     = [=]() -> Model {
+        auto toyBox         = [=]() -> Model {
             return shapes::Cube(1, {toyBoxDiff, toyBoxNorm, toyBoxPara, toyBoxSpec});
         };
 
@@ -101,40 +102,99 @@ int main() {
     // Sky box
     SkyBox* skyBox  = shapes::SkyBoxCube(skyBoxTex);
 
-    // Screen
-#ifdef ISLAND_ENABLE_HDR
-    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight, COLOR_HDR | MRT(2));
-    frameBuffer.enableMSAA(COLOR_HDR | MRT(2) | DEPTH | STENCIL, 4);
-    Screen* bright = shapes::ScreenRect({frameBuffer.getTexture(1)});
-    // For Bloom
-    FrameBuffer* pingPongBuffer[2];
-    Screen* blurredBright[2];
-    for (int i = 0; i < 2; ++i) {
-        pingPongBuffer[i] = new FrameBuffer(GameScrWidth, GameScrHeight, COLOR_HDR);
-        blurredBright[1 - i] = shapes::ScreenRect({pingPongBuffer[i]->getTexture()});
+    /**================ Tools ================**/
+    std::mt19937 randGen(std::random_device{}());
+    std::uniform_real_distribution<float> u01(0, 1.0);
+
+
+    /**================ Init FrameBuffers ================**/
+#ifdef ISLAND_ENABLE_DEFERRED_SHADING
+    // G-Buffer
+    FrameBuffer gBuffer(GameScrWidth, GameScrHeight);
+    gBuffer.texture(RGBA_FLOAT)     // position & depth
+            .texture(RGB_BYTE)      // specular
+            .texture(RGB_BYTE, 2)   // diffuse & specular
+            .depthBuffer().useRenderBuffer()
+            .build();
+
+    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight);
+    frameBuffer.texture(RGB_FLOAT, 2).depthBuffer().stencilBuffer().build();
+
+    // ssao
+    FrameBuffer ssaoFrame(GameScrWidth, GameScrHeight);
+    ssaoFrame.texture(RED_FLOAT, 1, GL_CLAMP_TO_EDGE, GL_NEAREST).build();
+
+    GLsizei nSamples = 64;
+    GLsizei noiseSize = 4;
+    std::vector<glm::vec3> ssaoSamples;
+    ssaoSamples.reserve(nSamples);
+    for (GLsizei i = 0; i < nSamples; ++i) {
+        glm::vec3 sample {
+                u01(randGen) * 2.0f - 1.0f,     // U(-1, 1)
+                u01(randGen) * 2.0f - 1.0f,     // U(-1, 1)
+                u01(randGen)                    // U(0, 1)
+        };
+        sample = glm::normalize(sample) * u01(randGen); // length -> U(0, 1);
+        GLfloat scale = GLfloat(i) / GLfloat(nSamples);
+        scale = std::lerp(0.1f, 1.0f, scale * scale);
+        ssaoSamples.push_back(scale * sample);
     }
 
-    Screen* screen = shapes::ScreenRect({frameBuffer.getTexture(), pingPongBuffer[0]->getTexture()});
+    GLsizei noiPixels = noiseSize * noiseSize;
+    std::vector<glm::vec3> ssaoNoises;
+    ssaoNoises.reserve(noiPixels);
+    for (GLsizei i = 0; i < noiPixels; ++i) {
+        ssaoNoises.emplace_back(
+                u01(randGen) * 2.0f - 1.0f,
+                u01(randGen) * 2.0f - 1.0f,
+                0.0f
+        );
+    }
+
+    GLuint ssaoNoiseTex = createTexture2D(GL_RGB, GL_RGB16F, GL_FLOAT, noiseSize, noiseSize, &ssaoNoises[0], GL_REPEAT, GL_NEAREST, false);
+
+
+
+#elif defined(ISLAND_ENABLE_HDR)
+    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight);
+    frameBuffer.texture(RGB_FLOAT, 2).depthBuffer().stencilBuffer().useRenderBuffer().build();
 #else
-    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight, COLOR_LDR);
-    frameBuffer.enableMSAA(COLOR_LDR | DEPTH | STENCIL, 4);
+    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight, RGB_BYTE);
+    frameBuffer.enableMSAA(RGB_BYTE | DEPTH | STENCIL, 4);
     Screen* screen = shapes::ScreenRect({frameBuffer.getTexture()});
 #endif
 
 
     double t0 = glfwGetTime();
+    double T0 = t0;
+    int nFrames = 0;
     Camera camera(initPos);
     GLuint envMap = textures::EMPTY_ENV_MAP;
 
+    /**================ World and Lights ================**/
     InitWorld();
-    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(.0f), 4096);
-    CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(30.0f), 4096);
-    CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0), 4096);
-    CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 4096);
-    CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 4096);
+    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(.0f), 4096, glm::vec3(1.0));
+//    CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(10.0f), 4096);
+//    CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0), 4096);
+//    CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 4096);
+//    CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 4096);
+//
+//    CreatePointLightNoShadow(glm::vec3(-3, 1, -3), glm::vec3(10.0f));
+//    CreatePointLightNoShadow(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0));
+//    CreatePointLightNoShadow(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0));
+//    CreatePointLightNoShadow(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f));
 
-    glGetError();
-    // render loop
+//    for (int i = -10; i <= 10; ++i) {
+//        for (int j = -10; j <= 10; ++j) {
+//            float r = u01(randGen) * 20;
+//            float g = u01(randGen) * 20;
+//            float b = u01(randGen) * 20;
+//            CreatePointLightNoShadow(glm::vec3(i*3, 1, j*3), glm::vec3(r, g, b));
+//        }
+//    }
+
+
+    /**================ Render Loop ================**/
     while (!glfwWindowShouldClose(window)) {
         // input
         // ...
@@ -146,6 +206,13 @@ int main() {
         double t1 = glfwGetTime();
         gameSPF = static_cast<float>(t1 - t0);
         t0 = t1;
+        double T1 = t1;
+        nFrames += 1;
+        if ((Long)T1 != (Long)T0) {
+            std::cout << "FPS: " << (int)(nFrames / (T1 - T0)) << '\n';
+            nFrames = 0;
+            T0 = T1;
+        }
 
 //        pLight.pos = glm::vec3(3*cos(t1) - 1, 1, 3*sin(t1) - 1);
 
@@ -191,67 +258,76 @@ int main() {
         ModelInfo grasses = MODEL_MANAGER.createInfo("grass");
         modelMtx = glm::mat4(1);
         grasses.addInstance({
-                glm::translate(modelMtx, glm::vec3(-1, 0, 0.5f)),
-                glm::translate(modelMtx, glm::vec3(1, 0, 0.5f))
+            glm::translate(modelMtx, glm::vec3(-1, 0, 0.5f)),
+            glm::translate(modelMtx, glm::vec3(1, 0, 0.5f))
         });
         PutModelInfo(CUTOUT, &grasses);
 
-        ModelInfo rgb_windows = MODEL_MANAGER.createInfo("rgb_window");
-        glm::vec3 poses[3];
-        poses[0] = glm::vec3(-2, 0, 2.5f);
-        poses[1] = glm::vec3(1, 0, 1.5f);
-        poses[2] = glm::vec3(-3, 0, 1.5f);
-        auto cmp = [&] (const glm::vec3& v1, glm::vec3& v2) {
-            return glm::distance(camera.getPos(), v1) > glm::distance(camera.getPos(), v2);
-        };
-        std::sort(poses, poses+3, cmp);
+//        ModelInfo rgb_windows = MODEL_MANAGER.createInfo("rgb_window");
+//        glm::vec3 poses[3];
+//        poses[0] = glm::vec3(-2, 0, 2.5f);
+//        poses[1] = glm::vec3(1, 0, 1.5f);
+//        poses[2] = glm::vec3(-3, 0, 1.5f);
+//        auto cmp = [&] (const glm::vec3& v1, glm::vec3& v2) {
+//            return glm::distance(camera.getPos(), v1) > glm::distance(camera.getPos(), v2);
+//        };
+//        std::sort(poses, poses+3, cmp);
+//
+//        rgb_windows.addInstance({
+//                glm::translate(modelMtx, poses[0]),
+//                glm::translate(modelMtx, poses[1]),
+//                glm::translate(modelMtx, poses[2])
+//        });
+//        PutModelInfo(TRANSPARENT, &rgb_windows);
 
-        rgb_windows.addInstance({
-                glm::translate(modelMtx, poses[0]),
-                glm::translate(modelMtx, poses[1]),
-                glm::translate(modelMtx, poses[2])
-        });
-        PutModelInfo(TRANSPARENT, &rgb_windows);
-
-
+        /*================ Render World ================*/
+        SetupPVMatrix(camera);
         RenderShadow();
-        RenderWorld(camera, frameBuffer);
-        Flush();
-
+#ifdef ISLAND_ENABLE_DEFERRED_SHADING
+        BindFrameBuffer(&gBuffer);
+        EnableDepthTest();
+        ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        RenderWorldGBuffer(camera, SOLID);
+        RenderWorldGBuffer(camera, CUTOUT);
+#else
+        BindFrameBuffer(&frameBuffer);
+        ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        EnableDepthTest();
+        RenderModelsInWorld(camera, SOLID);
+        RenderModelsInWorld(camera, CUTOUT);
+        RenderModelsInWorld(camera, PURE);
+#endif
 
         /*================ sky box ================*/
 ////        SkyShader.use();
 ////        SkyShader.uniformMatrix4fv(Shader::PROJECTION, proj);
 ////        SkyShader.uniformMatrix4fv("view", glm::mat4(glm::mat3(view)));
 ////        skyBox->draw(SkyShader);
+
+#ifdef ISLAND_ENABLE_DEFERRED_SHADING
+        BindFrameBuffer(&ssaoFrame);
+        RenderSSAO(gBuffer, &ssaoSamples[0], ssaoSamples.size(), ssaoNoiseTex);
+        Blur(0, 1);
+
+        BindFrameBuffer(&frameBuffer);
+        ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        ProcessGBuffer(gBuffer, ssaoFrame.getTexture());
+        RenderModelsInWorld(camera, PURE);
+#endif
+
         /*================ Post-Production ================*/
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        glDisable(GL_DEPTH_TEST);
-
 #ifdef ISLAND_ENABLE_HDR
-        GaussianBlurShader->use();
-        int gaussianLevels = 10;
-        bool horizontal = false;
-        GaussianBlurShader->uniformBool(Shader::GAUSSIAN_HORIZONTAL, horizontal);
-        pingPongBuffer[0]->bind();
-        bright->draw(*GaussianBlurShader);
-        int cycles = 2 * gaussianLevels - 1;
-        for (int i = 0; i < cycles; ++i) {
-            horizontal = !horizontal;
-            pingPongBuffer[horizontal]->bind();
-            GaussianBlurShader->uniformBool(Shader::GAUSSIAN_HORIZONTAL, horizontal);
-            blurredBright[horizontal]->draw(*GaussianBlurShader);
-        }
+        Blur(1, 10);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        ScreenShaderHDR->use();
-        screen->draw(*ScreenShaderHDR);
+        BindFrameBuffer(nullptr);
+        DisableDepthTest();
+        ClearBuffer(GL_COLOR_BUFFER_BIT, 1.0, 1.0, 1.0);
+        RenderFrame(frameBuffer, {0, 1});
 #else
         ScreenShader->use();
         screen->draw(*ScreenShader);
 #endif
-
+        Flush();
         glfwSwapBuffers(window);
         // 检查所有事件并更新窗口状态，否则窗口将无法响应外部输入（包括鼠标和键盘）
         glfwPollEvents();

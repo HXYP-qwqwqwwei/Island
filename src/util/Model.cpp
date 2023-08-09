@@ -13,9 +13,9 @@ Model::Model(const std::vector<Mesh> &meshes) {
 }
 
 
-void Model::draw(const Shader &shader, const Buffer& matrixBuffer) const {
-    matrixBuffer.bind();
-    int instancedAmount = static_cast<int>(matrixBuffer.getSize() / sizeof(glm::mat4));
+void Model::draw(const Shader &shader, const Buffer& transMats) const {
+    transMats.bind();
+    int instancedAmount = static_cast<int>(transMats.getSize() / sizeof(glm::mat4));
     for (const Mesh& mesh : this->meshes) {
         mesh.bind();
 
@@ -41,6 +41,92 @@ void Model::draw(const Shader &shader, const Buffer& matrixBuffer) const {
     for (const auto& mesh : this->meshes) {
         mesh.drawInstanced(shader, instancedAmount);
     }
+    transMats.unbind();
+}
+
+void Model::drawLightArea(const Shader &shader, const Buffer& transWithLightInfo) const {
+    transWithLightInfo.bind();
+    GLint size = SZ_MAT4F + SZ_VEC3F * 3 + SZ_VEC2F;
+    int instancedAmount = static_cast<int>(transWithLightInfo.getSize() / size);
+    for (const Mesh& mesh : this->meshes) {
+        mesh.bind();
+
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, size, (void*)nullptr);
+
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, size, (void*)(SZ_VEC4F));
+
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, size, (void*)(2*SZ_VEC4F));
+
+        glEnableVertexAttribArray(6);
+        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)(3*SZ_VEC4F));
+
+        glEnableVertexAttribArray(8);
+        glVertexAttribPointer(8, 3, GL_FLOAT, GL_FALSE, size, (void*)(SZ_MAT4F));
+
+        glEnableVertexAttribArray(9);
+        glVertexAttribPointer(9, 3, GL_FLOAT, GL_FALSE, size, (void*)(SZ_MAT4F + SZ_VEC3F));
+
+        glEnableVertexAttribArray(10);
+        glVertexAttribPointer(10, 3, GL_FLOAT, GL_FALSE, size, (void*)(SZ_MAT4F + 2*SZ_VEC3F));
+
+        glEnableVertexAttribArray(11);
+        glVertexAttribPointer(11, 2, GL_FLOAT, GL_FALSE, size, (void*)(SZ_MAT4F + 3*SZ_VEC3F));
+
+        glVertexAttribDivisor(3, 1);
+        glVertexAttribDivisor(4, 1);
+        glVertexAttribDivisor(5, 1);
+        glVertexAttribDivisor(6, 1);
+        glVertexAttribDivisor(8, 1);
+        glVertexAttribDivisor(9, 1);
+        glVertexAttribDivisor(10, 1);
+        glVertexAttribDivisor(11, 1);
+
+        mesh.unbind();
+    }
+    transWithLightInfo.unbind();
+    for (const auto& mesh : this->meshes) {
+        mesh.drawInstanced(shader, instancedAmount);
+    }
+}
+
+
+void Model::drawWithColor(const Shader &shader, const Buffer &transWithColor) const {
+    transWithColor.bind();
+    GLint size = SZ_MAT4F + SZ_VEC3F;
+    int instancedAmount = static_cast<int>(transWithColor.getSize() / size);
+    for (const Mesh& mesh : this->meshes) {
+        mesh.bind();
+
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, size, (void*)nullptr);
+
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, size, (void*)(SZ_VEC4F));
+
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, size, (void*)(2*SZ_VEC4F));
+
+        glEnableVertexAttribArray(6);
+        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)(3*SZ_VEC4F));
+
+        glEnableVertexAttribArray(9);
+        glVertexAttribPointer(9, 3, GL_FLOAT, GL_FALSE, size, (void*)(SZ_MAT4F));
+
+        glVertexAttribDivisor(3, 1);
+        glVertexAttribDivisor(4, 1);
+        glVertexAttribDivisor(5, 1);
+        glVertexAttribDivisor(6, 1);
+        glVertexAttribDivisor(9, 1);
+        mesh.unbind();
+    }
+    transWithColor.unbind();
+    for (const auto& mesh : this->meshes) {
+        mesh.drawInstanced(shader, instancedAmount);
+    }
+
 }
 
 

@@ -5,6 +5,8 @@
 #include "util/shaders.h"
 #include "assimp/material.h"
 
+
+Shader* VoidShader;
 Shader* SolidShader;
 Shader* SimpleShader;
 Shader* TransparentShader;
@@ -14,21 +16,31 @@ Shader* ScreenShaderHDR;
 Shader* SkyShader;
 Shader* DepthShader;
 Shader* DepthCubeShader;
+Shader* GBufferShader;
+Shader* DeferredShader;
+Shader* DeferredPLightShader;
+Shader* DeferredPLNoShadowShader;
+Shader* SSAOShader;
+
 
 Shader* GaussianBlurShader;
 
 
 
 void compileShaders() {
+    VoidShader = new Shader();
+    VoidShader->loadShader("VoidShader.vert", GL_VERTEX_SHADER);
+    VoidShader->loadShader("VoidShader.frag", GL_FRAGMENT_SHADER);
+    VoidShader->link();
+
     SolidShader = new Shader();
     SolidShader->loadShader("CompletedShader.vert", GL_VERTEX_SHADER);
     SolidShader->loadShader("SolidShader.frag", GL_FRAGMENT_SHADER);
     SolidShader->link();
 
-
     SimpleShader = new Shader();
     SimpleShader->loadShader("CompletedShader.vert", GL_VERTEX_SHADER);
-    SimpleShader->loadShader("SimpleShader.frag", GL_FRAGMENT_SHADER);
+    SimpleShader->loadShader("PureColorShader.frag", GL_FRAGMENT_SHADER);
     SimpleShader->link();
 
     TransparentShader = new Shader();
@@ -50,6 +62,31 @@ void compileShaders() {
     ScreenShaderHDR->loadShader("ScreenShader.vert", GL_VERTEX_SHADER);
     ScreenShaderHDR->loadShader("ScreenShaderHDR.frag", GL_FRAGMENT_SHADER);
     ScreenShaderHDR->link();
+
+    GBufferShader = new Shader();
+    GBufferShader->loadShader("GBufferShader.vert", GL_VERTEX_SHADER);
+    GBufferShader->loadShader("GBufferShader.frag", GL_FRAGMENT_SHADER);
+    GBufferShader->link();
+
+    DeferredShader = new Shader();
+    DeferredShader->loadShader("DeferredDLightShader.vert", GL_VERTEX_SHADER);
+    DeferredShader->loadShader("DeferredDLightShader.frag", GL_FRAGMENT_SHADER);
+    DeferredShader->link();
+
+    DeferredPLightShader = new Shader();
+    DeferredPLightShader->loadShader("DeferredPLightShader.vert", GL_VERTEX_SHADER);
+    DeferredPLightShader->loadShader("DeferredPLightShader.frag", GL_FRAGMENT_SHADER);
+    DeferredPLightShader->link();
+
+    DeferredPLNoShadowShader = new Shader();
+    DeferredPLNoShadowShader->loadShader("DeferredPLightNoShadow.vert", GL_VERTEX_SHADER);
+    DeferredPLNoShadowShader->loadShader("DeferredPLightNoShadow.frag", GL_FRAGMENT_SHADER);
+    DeferredPLNoShadowShader->link();
+
+    SSAOShader = new Shader();
+    SSAOShader->loadShader("ScreenShader.vert", GL_VERTEX_SHADER);
+    SSAOShader->loadShader("SSAOShader.frag", GL_FRAGMENT_SHADER);
+    SSAOShader->link();
 
 
     SkyShader = new Shader();
@@ -76,7 +113,7 @@ void compileShaders() {
 
 }
 
-void Shader::compileShader(const std::string& source, GLObject& shaderObject, GLenum type) {
+bool Shader::compileShader(const std::string& source, GLObject& shaderObject, GLenum type) {
     int success = 1;
     char infoLog[512];
     shaderObject = glCreateShader(type);
@@ -90,6 +127,7 @@ void Shader::compileShader(const std::string& source, GLObject& shaderObject, GL
         glGetShaderInfoLog(shaderObject, 512, nullptr, infoLog);
         std::cerr << "ERROR::SHADER::COMPILATION_FAILED\n" << infoLog << std::endl;
     }
+    return success;
 }
 
 const Shader* selectShader(RenderType type) {
@@ -125,6 +163,10 @@ const Shader* selectCubeShader(RenderType type) {
             return SimpleShader;
     }
 
+}
+
+const Shader *selectGBufferShader(RenderType type) {
+    return GBufferShader;
 }
 
 std::string Shader::TextureName(int type, int n) {
@@ -172,7 +214,10 @@ void Shader::loadShader(const std::string& filename, GLenum type) {
     const std::string source((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
     input.close();
     GLObject shader;
-    compileShader(source, shader, type);
+    if(!compileShader(source, shader, type)) {
+        std::cerr << "File \"" << filename << "\" compile failed.\n";
+        return;
+    }
     this->attachShader(shader);
     glDeleteShader(shader);
 }
@@ -199,9 +244,9 @@ void Shader::uniformVec3(const std::string &name, const glm::vec3& vec) const {
     glUniform3fv(loc, 1, glm::value_ptr(vec));
 }
 
-void Shader::uniformVec4(const std::string &name, const glm::vec4& vec) const {
+void Shader::uniformVec2(const std::string &name, const glm::vec2& vec) const {
     GLLoc loc = glGetUniformLocation(shaderProgram, name.c_str());
-    glUniform4fv(loc, 1, glm::value_ptr(vec));
+    glUniform2fv(loc, 1, glm::value_ptr(vec));
 }
 
 void Shader::uniformFloat(const std::string &name, float fv) const {
