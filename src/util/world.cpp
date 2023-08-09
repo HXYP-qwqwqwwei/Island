@@ -342,7 +342,7 @@ void SetDirectLight(glm::vec3 injection, glm::vec3 color, GLsizei shadowRes, glm
     DirectShadowBuffer = shadowBuffer;
 }
 
-void ProcessGBuffer(const Camera& camera, const FrameBuffer& gBuffer) {
+void ProcessGBuffer(const FrameBuffer& gBuffer, const GLuint& ssao) {
     static auto* ball = shapes::BallMesh(1, 20, 10);
     static auto mesh = ball->build();
     if (BoundFrame == nullptr) {
@@ -354,6 +354,7 @@ void ProcessGBuffer(const Camera& camera, const FrameBuffer& gBuffer) {
         gBuffer.getTexture(1),
         gBuffer.getTexture(2),
         gBuffer.getTexture(3),
+        ssao
     });
     mesh.setTextures({
          {gBuffer.getTexture(0)},
@@ -412,6 +413,28 @@ void ProcessGBuffer(const Camera& camera, const FrameBuffer& gBuffer) {
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_TRUE);
 }
+
+
+void RenderSSAO(const FrameBuffer& gBuffer, const glm::vec3* samples, size_t n, GLuint texNoise, GLfloat radius, GLfloat power) {
+    screen->setTextures({
+        gBuffer.getTexture(0),
+        gBuffer.getTexture(1),
+        texNoise
+    });
+
+    const Shader* shader = SSAOShader;
+    shader->use();
+    for (size_t i = 0; i < n; ++i) {
+        shader->uniformVec3(Shader::SSAO_SAMPLES + std::to_string(i) + ']', samples[i]);
+    }
+    shader->uniformFloat(Shader::SSAO_KERNEL_RADIUS, radius);
+    shader->uniformFloat(Shader::SSAO_POWER, power);
+    shader->uniformVec2(Shader::SCREEN_SIZE, glm::vec2(GameScrWidth, GameScrHeight));
+
+    screen->draw(*shader);
+    UnbindAllTextures();
+}
+
 
 
 void RenderFrame(const FrameBuffer& frame, std::initializer_list<int> indices) {

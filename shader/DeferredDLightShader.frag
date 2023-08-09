@@ -3,10 +3,11 @@ in vec2 fTexUV;
 in mat4 view_inv;
 in vec3 dLightInj_viewSpace;
 
-uniform sampler2D texture0; // pos
+uniform sampler2D texture0; // pos & depth
 uniform sampler2D texture1; // norm
 uniform sampler2D texture2; // diff
 uniform sampler2D texture3; // spec
+uniform sampler2D texture4; // ssao
 
 layout (location = 0) out vec4 fragColor;
 layout (location = 1) out vec4 brightColor;
@@ -34,11 +35,12 @@ void main() {
     texDiff = pow(texDiff, vec3(gamma));
 
     vec3 texSpec = texture(texture3, fTexUV).rgb;
+    float occlusion = texture(texture4, fTexUV).r;
 
     float dShadow = directLightShadow(directLight.depthTex, lightSpaceMtx * view_inv * vec4(fPos, 1.0), directLight.injection, texNorm);
 
     // Ambient
-    vec3 ambient = directLight.ambient * texDiff;
+    vec3 ambient = directLight.ambient * texDiff * occlusion;
 
     // Diffuse
     vec3 inj_dLight  = normalize(dLightInj_viewSpace);

@@ -64,6 +64,10 @@ public:
     static constexpr const char SHININESS[]             = "texes.shininess";
     static constexpr const char TEXTURES[]              = "texes.";
     static constexpr const char ENVIRONMENT_MAP[]       = "environment";
+    static constexpr const char SSAO_SAMPLES[]          = "samples[";
+    static constexpr const char SSAO_KERNEL_RADIUS[]    = "radius";
+    static constexpr const char SSAO_POWER[]            = "power";
+    static constexpr const char SCREEN_SIZE[]           = "screenSize";
 //    static constexpr const char PROJECTION[] = "proj";
     static constexpr const char CUBE_SPACE_MATRICES[6][21] = {
             "cubeSpaceMatrices[0]",
@@ -92,6 +96,7 @@ extern Shader* GBufferShader;
 extern Shader* DeferredShader;
 extern Shader* DeferredPLightShader;
 extern Shader* DeferredPLNoShadowShader;
+extern Shader* SSAOShader;
 
 
 extern Shader* GaussianBlurShader;

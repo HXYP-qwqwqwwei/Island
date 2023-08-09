@@ -4,7 +4,7 @@ in vec3 fPos;
 in vec2 fTexUV;
 in mat3 TBN;
 
-layout (location = 0) out vec3 gPos;
+layout (location = 0) out vec4 gPos;
 layout (location = 1) out vec3 gNorm;
 layout (location = 2) out vec3 gDiff;
 layout (location = 3) out vec3 gSpec;
@@ -20,10 +20,13 @@ struct Textures {
 
 uniform Textures texes;
 
+//将深度值变换到线性[zNear, zFar]中
+float linearizeDepth(float depth, float zNear, float zFar);
 vec2 parallaxFixedUV(sampler2D parallaxTex, vec3 view);
 
 void main() {
-    gPos  = fPos;
+    gPos.xyz = fPos;
+    gPos.w   = linearizeDepth(gl_FragCoord.z, 0.1, 100.0);
 
     vec3 view_tanSpace = transpose(TBN) * normalize(-fPos);
     vec2 fixedUV = parallaxFixedUV(texes.parallax0, view_tanSpace);
@@ -39,6 +42,13 @@ void main() {
     gNorm = normalize(TBN * norm);
     gSpec = texture(texes.specular0, fixedUV).rgb;
 }
+
+
+float linearizeDepth(float depth, float zNear, float zFar) {
+    float z = depth * 2.0 - 1.0; // back to NDC
+    return (2.0 * zNear * zFar) / (zFar + zNear - z * (zFar - zNear));
+}
+
 
 
 vec2 parallaxFixedUV(sampler2D parallaxTex, vec3 view) {

@@ -13,6 +13,8 @@
 #define RGB_FLOAT   0x1
 #define RGBA_BYTE   0x2
 #define RGBA_FLOAT  0x3
+#define RED_BYTE    0x4
+#define RED_FLOAT   0x5
 #define DEPTH       0x2                 // 1
 #define STENCIL     0x4                 // 2
 //#define MSAA(S)     (((S-1) & 0xF)<<3)  // 3 ~ 6
@@ -38,28 +40,6 @@ protected:
     const GLenum target;
 };
 
-
-//class FrameBuffer {
-//public:
-//    FrameBuffer(GLsizei width, GLsizei height, int mode, bool depthStencilReadable = false);
-//    ~FrameBuffer();
-//    void bind() const;
-//    void unbind() const;
-//    void enableMSAA(int mode, int samples);
-//    [[nodiscard]] GLuint getDepthStencilTex() const;
-//    [[nodiscard]] GLuint getTexture(int i = 0) const;
-//    const GLsizei width;
-//    const GLsizei height;
-//private:
-//    const int mode;
-//    FrameBuffer* msBuffer = nullptr;    // multisampling buffer
-//
-//    GLuint object{};
-//    GLuint rbo{};
-//    GLuint* colors = nullptr;
-//    GLuint depth_stencil{};
-//    const bool depthStencilReadable;
-//};
 class FrameBuffer;
 
 void swapTexture(FrameBuffer* f1, FrameBuffer* f2, int i1 = 0, int i2 = 0);

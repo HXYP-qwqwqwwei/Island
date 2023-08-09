@@ -20,6 +20,7 @@ Shader* GBufferShader;
 Shader* DeferredShader;
 Shader* DeferredPLightShader;
 Shader* DeferredPLNoShadowShader;
+Shader* SSAOShader;
 
 
 Shader* GaussianBlurShader;
@@ -81,6 +82,11 @@ void compileShaders() {
     DeferredPLNoShadowShader->loadShader("DeferredPLightNoShadow.vert", GL_VERTEX_SHADER);
     DeferredPLNoShadowShader->loadShader("DeferredPLightNoShadow.frag", GL_FRAGMENT_SHADER);
     DeferredPLNoShadowShader->link();
+
+    SSAOShader = new Shader();
+    SSAOShader->loadShader("ScreenShader.vert", GL_VERTEX_SHADER);
+    SSAOShader->loadShader("SSAOShader.frag", GL_FRAGMENT_SHADER);
+    SSAOShader->link();
 
 
     SkyShader = new Shader();

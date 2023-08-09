@@ -321,33 +321,32 @@ FrameBuffer& FrameBuffer::texture(int mode, int n, GLint warp, GLint filter) {
         GLuint tex;
         glGenTextures(1, &tex);
 
-        GLenum target, type, format;
+        GLenum target;
         GLint internalFormat;
         switch (mode) {
+            case RGB_BYTE:
+                internalFormat  = GL_RGB;
+                break;
             case RGB_FLOAT:
-                type            = GL_FLOAT;
-                format          = GL_RGB;
                 internalFormat  = GL_RGB16F;
                 break;
             case RGBA_BYTE:
-                type            = GL_UNSIGNED_BYTE;
-                format          = GL_RGBA;
                 internalFormat  = GL_RGBA;
                 break;
             case RGBA_FLOAT:
-                type            = GL_FLOAT;
-                format          = GL_RGBA;
                 internalFormat  = GL_RGBA16F;
                 break;
+            case RED_BYTE:
+                internalFormat  = GL_RED;
+                break;
+            case RED_FLOAT:
             default:
-                type            = GL_UNSIGNED_BYTE;
-                format          = GL_RGB;
-                internalFormat  = GL_RGB;
+                internalFormat  = GL_R16F;
         }
 
         target = GL_TEXTURE_2D;
         glBindTexture(target, tex);
-        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, nullptr);
+        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
         glTexParameteri(target, GL_TEXTURE_WRAP_S, warp);
         glTexParameteri(target, GL_TEXTURE_WRAP_T, warp);
         glTexParameteri(target, GL_TEXTURE_MIN_FILTER, filter);

@@ -111,7 +111,8 @@ int main() {
 #ifdef ISLAND_ENABLE_DEFERRED_SHADING
     // G-Buffer
     FrameBuffer gBuffer(GameScrWidth, GameScrHeight);
-    gBuffer.texture(RGB_FLOAT, 2)   // position & normals
+    gBuffer.texture(RGBA_FLOAT)     // position & depth
+            .texture(RGB_BYTE)      // specular
             .texture(RGB_BYTE, 2)   // diffuse & specular
             .depthBuffer().useRenderBuffer()
             .build();
@@ -121,6 +122,7 @@ int main() {
 
     // ssao
     FrameBuffer ssaoFrame(GameScrWidth, GameScrHeight);
+    ssaoFrame.texture(RED_FLOAT, 1, GL_CLAMP_TO_EDGE, GL_NEAREST).build();
 
     GLsizei nSamples = 64;
     GLsizei noiseSize = 4;
@@ -149,7 +151,7 @@ int main() {
         );
     }
 
-    GLuint noiseTex = createTexture2D(GL_RGB, GL_RGB16F, GL_FLOAT, noiseSize, noiseSize, &ssaoNoises[0], GL_REPEAT, GL_NEAREST, false);
+    GLuint ssaoNoiseTex = createTexture2D(GL_RGB, GL_RGB16F, GL_FLOAT, noiseSize, noiseSize, &ssaoNoises[0], GL_REPEAT, GL_NEAREST, false);
 
 
 
@@ -171,11 +173,11 @@ int main() {
 
     /**================ World and Lights ================**/
     InitWorld();
-    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(.0f), 4096, glm::vec3(.0));
-    CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(10.0f), 4096);
-    CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0), 4096);
-    CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 4096);
-    CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 4096);
+    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(.0f), 4096, glm::vec3(1.0));
+//    CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(10.0f), 4096);
+//    CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0), 4096);
+//    CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 4096);
+//    CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 4096);
 //
 //    CreatePointLightNoShadow(glm::vec3(-3, 1, -3), glm::vec3(10.0f));
 //    CreatePointLightNoShadow(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0));
@@ -303,9 +305,13 @@ int main() {
 ////        skyBox->draw(SkyShader);
 
 #ifdef ISLAND_ENABLE_DEFERRED_SHADING
+        BindFrameBuffer(&ssaoFrame);
+        RenderSSAO(gBuffer, &ssaoSamples[0], ssaoSamples.size(), ssaoNoiseTex);
+        Blur(0, 1);
+
         BindFrameBuffer(&frameBuffer);
         ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        ProcessGBuffer(camera, gBuffer);
+        ProcessGBuffer(gBuffer, ssaoFrame.getTexture());
         RenderModelsInWorld(camera, PURE);
 #endif
 
