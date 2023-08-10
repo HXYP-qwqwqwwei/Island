@@ -168,7 +168,7 @@ void Model::processNode(const aiNode *root, const aiScene *scene) {
 void Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
     std::vector<Vertex3D> vertices;
     std::vector<uint> indices;
-    std::vector<Texture2D> textures;
+    std::vector<Texture2DWithType> textures;
     // Vertices
     vertices.reserve(mesh->mNumVertices);
     for (uint i = 0; i < mesh->mNumVertices; ++i) {
@@ -212,18 +212,18 @@ void Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
 }
 
 
-std::vector<Texture2D> Model::loadTextures(const aiMaterial *material, aiTextureType type) {
+std::vector<Texture2DWithType> Model::loadTextures(const aiMaterial *material, aiTextureType type) {
     uint cnt = material->GetTextureCount(type);
-    std::vector<Texture2D> textures;
+    std::vector<Texture2DWithType> textures;
     for (uint i = 0; i < cnt; ++i) {
         aiString path;
         material->GetTexture(type, i, &path);
-        Texture2D& loaded = this->loadedTextures[path.C_Str()];
+        Texture2DWithType& loaded = this->loadedTextures[path.C_Str()];
         if (loaded.id != 0) {
             textures.push_back(loaded);
             continue;
         }
-        Texture2D tex{load_texture(path.C_Str(), directory), type};
+        Texture2DWithType tex{load_texture(path.C_Str(), directory), type};
         this->loadedTextures[path.C_Str()] = tex;
         textures.push_back(tex);
     }

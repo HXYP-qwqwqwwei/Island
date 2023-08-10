@@ -7,10 +7,10 @@
 #include "AbstractMesh.hpp"
 #include "texture_util.h"
 
-class SkyBox: public AbstractMesh<VertexCube, GLuint> {
+class SkyBox: public AbstractMesh<VertexCube, TextureCube> {
 public:
     SkyBox() = default;
-    SkyBox(const std::vector<VertexCube>& vertices, const std::vector<uint>& indices, const std::vector<GLuint>& textures);
+    SkyBox(const std::vector<VertexCube>& vertices, const std::vector<uint>& indices, const std::vector<TextureCube>& textures);
     void draw(const Shader &shader) const override;
 protected:
     void setupVertexAttribs() override;

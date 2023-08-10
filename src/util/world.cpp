@@ -15,7 +15,9 @@ static FrameBuffer* DirectShadowBuffer = nullptr;
 
 static Buffer* PVMatBuffer;
 static FrameBuffer* BoundFrame;
-static FrameBuffer* PingPongFrames[2];
+
+static FrameBuffer* BlurRGBBuffer;
+static FrameBuffer* BlurREDBuffer;
 static Screen* screen;
 ModelManager MODEL_MANAGER;
 
@@ -26,11 +28,12 @@ void InitWorld() {
     glEnable(GL_STENCIL_TEST);
     glEnable(GL_CULL_FACE);
 
-    for (auto & frame: PingPongFrames) {
-        auto* buffer = new FrameBuffer(GameScrWidth, GameScrHeight);
-        buffer->texture(RGB_FLOAT).build();
-        frame = buffer;
-    }
+    BlurRGBBuffer = &((new FrameBuffer(GameScrWidth, GameScrHeight))->texture(GL_RGB16F));
+    BlurRGBBuffer->build();
+
+    BlurREDBuffer = &((new FrameBuffer(GameScrWidth, GameScrHeight))->texture(GL_R16F));
+    BlurREDBuffer->build();
+
 
     PVMatBuffer = new Buffer(GL_UNIFORM_BUFFER);
     PVMatBuffer->putData(SZ_MAT4F * 2, nullptr, GL_STATIC_DRAW);
@@ -307,7 +310,7 @@ void UnbindAllTextures() {
 
 uint CreatePointLight(glm::vec3 pos, glm::vec3 color, GLsizei shadowRes, glm::vec3 attenu, glm::vec2 zNearFar) {
     uint id = PointLights.size();
-    auto* shadowBuffer = new FrameBufferCube(shadowRes, DEPTH);
+    auto* shadowBuffer = new FrameBufferCube(shadowRes, GL_NONE, true);
     auto* p = new PointLight{color, pos, attenu, zNearFar, shadowBuffer->getDepthCubeMap()};
 
     PointShadowBuffers.push_back(shadowBuffer);
@@ -342,7 +345,7 @@ void SetDirectLight(glm::vec3 injection, glm::vec3 color, GLsizei shadowRes, glm
     DirectShadowBuffer = shadowBuffer;
 }
 
-void ProcessGBuffer(const FrameBuffer& gBuffer, const GLuint& ssao) {
+void ProcessGBuffer(const FrameBuffer& gBuffer, const Texture2D& ssao) {
     static auto* ball = shapes::BallMesh(1, 20, 10);
     static auto mesh = ball->build();
     if (BoundFrame == nullptr) {
@@ -415,7 +418,7 @@ void ProcessGBuffer(const FrameBuffer& gBuffer, const GLuint& ssao) {
 }
 
 
-void RenderSSAO(const FrameBuffer& gBuffer, const glm::vec3* samples, size_t n, GLuint texNoise, GLfloat radius, GLfloat power) {
+void RenderSSAO(const FrameBuffer& gBuffer, const glm::vec3* samples, size_t n, const Texture2D& texNoise, GLfloat radius, GLfloat power) {
     screen->setTextures({
         gBuffer.getTexture(0),
         gBuffer.getTexture(1),
@@ -439,9 +442,9 @@ void RenderSSAO(const FrameBuffer& gBuffer, const glm::vec3* samples, size_t n, 
 
 void RenderFrame(const FrameBuffer& frame, std::initializer_list<int> indices) {
 
-    auto getTex = [&](int id) -> GLuint { return frame.getTexture(id); };
+    auto getTex = [&](int id) -> Texture2D { return frame.getTexture(id); };
 
-    std::vector<GLuint> textures(indices.size(), 0);
+    std::vector<Texture2D> textures(indices.size());
     std::transform(indices.begin(), indices.end(), textures.begin(), getTex);
     screen->setTextures(textures);
     ScreenShaderHDR->use();
@@ -454,41 +457,41 @@ void RenderScreen() {
 }
 
 
-void Blur(int index, int blurLevel) {
+void Blur(GLsizei index, GLsizei blurLevel) {
     if (BoundFrame == nullptr) {
         std::cerr << "WARN::WORLD::Cannot blit when bound default frameBuffer\n";
         return;
     }
-    if (blurLevel == 0) return;
-    GLuint tex = BoundFrame->getTexture(index);
+    if (blurLevel <= 0) return;
+
+    Texture2D tex = BoundFrame->getTexture(index);
+    FrameBuffer* blurFrame;
+    switch (tex.internalFormat) {
+        case GL_R16F:
+            blurFrame = BlurREDBuffer;
+            break;
+        case GL_RGB16F:
+            blurFrame = BlurRGBBuffer;
+            break;
+        default:
+            std::cerr << "ERROR::WORLD::Blurring not supported for textures with format " << tex.internalFormat << '\n';
+            return;
+    }
 
 
     GaussianBlurShader->use();
     bool horizontal = false;
-    GaussianBlurShader->uniformBool(Shader::GAUSSIAN_HORIZONTAL, horizontal);
 
-    PingPongFrames[0]->bind();
-    screen->setTextures({tex});
-    screen->draw(*GaussianBlurShader);
-
-    int cycles = 2 * blurLevel - 1;
-    for (int i = 0; i < cycles; ++i) {
-        screen->setTextures({PingPongFrames[horizontal]->getTexture()});
-        horizontal = !horizontal;
-        PingPongFrames[horizontal]->bind();
+    GLsizei cycles = 2 * blurLevel;
+    for (GLsizei i = 0; i < cycles; ++i) {
+        screen->setTextures({BoundFrame->getTexture(index)});
         GaussianBlurShader->uniformBool(Shader::GAUSSIAN_HORIZONTAL, horizontal);
+        blurFrame->bind();
         screen->draw(*GaussianBlurShader);
+
+        swapTexture(BoundFrame, blurFrame, index, 0);
+        horizontal = !horizontal;
     }
-    swapTexture(BoundFrame, PingPongFrames[1], index);
-    BoundFrame->bind();
-}
-
-void SetScreenTextures(const std::vector<GLuint> &textures) {
-    screen->setTextures(textures);
-}
-
-void SetScreenTextures(const std::initializer_list<GLuint>& textures) {
-    screen->setTextures(textures);
 }
 
 

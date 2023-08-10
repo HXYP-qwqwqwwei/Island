@@ -15,12 +15,12 @@ template<class T>
 using TexList = const std::initializer_list<T>&;
 
 namespace shapes {
-    Model Cube(float len, TexList<Texture2D> textures = {});
-    Model Rectangle(float w, float h, TexList<Texture2D> textures = {}, float maxU = 1, float maxV = 1);
+    Model Cube(float len, TexList<Texture2DWithType> textures = {});
+    Model Rectangle(float w, float h, TexList<Texture2DWithType> textures = {}, float maxU = 1, float maxV = 1);
     BuiltinMesh* BallMesh(float radius, int segmentsXZ, int segmentsY);
     Model Ball(float radius, int segmentsXZ, int segmentsY);
-    Screen* ScreenRect(TexList<GLuint> tex = {});
-    SkyBox* SkyBoxCube(GLuint texture);
+    Screen* ScreenRect(TexList<Texture2D> tex = {});
+    SkyBox* SkyBoxCube(TextureCube texture);
 }
 
 #endif //ISLAND_SHAPES_H

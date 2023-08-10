@@ -216,10 +216,10 @@ static const GLenum ColorAttachments[8]{
 //    return 0;
 //}
 
-FrameBufferCube::FrameBufferCube(GLsizei length, int mode): length(length) {
+FrameBufferCube::FrameBufferCube(GLsizei length, GLint colorFormat, bool depth): length(length), colorFormat(colorFormat) {
     glGenFramebuffers(1, &this->object);
     glBindFramebuffer(GL_FRAMEBUFFER, this->object);
-    if (mode & RGB_BYTE) {
+    if (colorFormat != GL_NONE) {
         glGenTextures(1, &this->colorCube);
         glBindTexture(GL_TEXTURE_CUBE_MAP, this->colorCube);
         for (int i = 0; i < 6; ++i) {
@@ -239,7 +239,7 @@ FrameBufferCube::FrameBufferCube(GLsizei length, int mode): length(length) {
         glReadBuffer(GL_NONE);
     }
 
-    if (mode & DEPTH) {
+    if (depth) {
         glGenTextures(1, &this->depthCube);
         glBindTexture(GL_TEXTURE_CUBE_MAP, this->depthCube);
         for (int i = 0; i < 6; ++i) {
@@ -257,47 +257,18 @@ FrameBufferCube::FrameBufferCube(GLsizei length, int mode): length(length) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-GLuint FrameBufferCube::getDepthCubeMap() const {
-    return this->depthCube;
+TextureCube FrameBufferCube::getDepthCubeMap() const {
+    return {this->depthCube, length, length, GL_DEPTH_COMPONENT};
 }
 
-GLuint FrameBufferCube::getTextureCubeTex() const {
-    return this->colorCube;
+TextureCube FrameBufferCube::getTextureCubeTex() const {
+    return {this->colorCube, length, length, colorFormat};
 }
 
 void FrameBufferCube::bind() const {
     glBindFramebuffer(GL_FRAMEBUFFER, this->object);
 }
 
-TextureBuffer::TextureBuffer(GLsizei width, GLsizei height, int mode, GLint warp, GLint filter) {
-    glGenTextures(1, &this->id);
-    bool hdr = mode & RGB_FLOAT;
-    int samples = MSAA_SAMPLES(mode);
-
-    GLenum target;
-    GLenum type;
-    GLint format;
-    if (hdr) {
-        type    = GL_FLOAT;
-        format  = GL_RGB16F;
-    } else {
-        type    = GL_UNSIGNED_BYTE;
-        format  = GL_RGB;
-    }
-    target = GL_TEXTURE_2D;
-    glBindTexture(target, this->id);
-    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, GL_RGB, type, nullptr);
-    glTexParameteri(target, GL_TEXTURE_WRAP_S, warp);
-    glTexParameteri(target, GL_TEXTURE_WRAP_T, warp);
-    glTexParameteri(target, GL_TEXTURE_MIN_FILTER, filter);
-    glTexParameteri(target, GL_TEXTURE_MAG_FILTER, filter);
-    glBindTexture(target, 0);
-}
-
-void TextureBuffer::free() {
-    glDeleteTextures(1, &this->id);
-    this->id = 0;
-}
 
 FrameBuffer::FrameBuffer(GLsizei width, GLsizei height): width(width), height(height) {}
 
@@ -308,52 +279,27 @@ FrameBuffer::~FrameBuffer() {
         if (useRBO) glDeleteRenderbuffers(1, &this->depth_stencil);
         else glDeleteTextures(1, &this->depth_stencil);
     }
-    size_t n = this->colors.size();
-    if (n > 0) {
-        glDeleteTextures(static_cast<GLsizei>(n), &this->colors[0]);
+    for (auto& tex : this->colors) {
+        glDeleteTextures(1, &tex.id);
     }
 }
 
 
-FrameBuffer& FrameBuffer::texture(int mode, int n, GLint warp, GLint filter) {
-    n = max(1, n);
+FrameBuffer& FrameBuffer::texture(GLint internalFormat, int n, GLint warp, GLint filter) {
+    n = MAX(1, n);
     for (int i = 0; i < n; ++i) {
         GLuint tex;
         glGenTextures(1, &tex);
 
-        GLenum target;
-        GLint internalFormat;
-        switch (mode) {
-            case RGB_BYTE:
-                internalFormat  = GL_RGB;
-                break;
-            case RGB_FLOAT:
-                internalFormat  = GL_RGB16F;
-                break;
-            case RGBA_BYTE:
-                internalFormat  = GL_RGBA;
-                break;
-            case RGBA_FLOAT:
-                internalFormat  = GL_RGBA16F;
-                break;
-            case RED_BYTE:
-                internalFormat  = GL_RED;
-                break;
-            case RED_FLOAT:
-            default:
-                internalFormat  = GL_R16F;
-        }
-
-        target = GL_TEXTURE_2D;
-        glBindTexture(target, tex);
+        glBindTexture(GL_TEXTURE_2D, tex);
         glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-        glTexParameteri(target, GL_TEXTURE_WRAP_S, warp);
-        glTexParameteri(target, GL_TEXTURE_WRAP_T, warp);
-        glTexParameteri(target, GL_TEXTURE_MIN_FILTER, filter);
-        glTexParameteri(target, GL_TEXTURE_MAG_FILTER, filter);
-        glBindTexture(target, 0);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, warp);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, warp);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+        glBindTexture(GL_TEXTURE_2D, 0);
 
-        this->colors.push_back(tex);
+        this->colors.emplace_back(tex, width, height, internalFormat);
     }
     return *this;
 }
@@ -381,13 +327,13 @@ void FrameBuffer::build() {
     glGenFramebuffers(1, &this->object);
     glBindFramebuffer(GL_FRAMEBUFFER, this->object);
 
-    GLsizei nTex = min(this->colors.size(), 8);
+    GLsizei nTex = MIN(this->colors.size(), 8);
     if (nTex == 0) {
         glReadBuffer(GL_NONE);
         glDrawBuffer(GL_NONE);
     } else {
         for (int i = 0; i < nTex; ++i) {
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, this->colors[i], 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, this->colors[i].id, 0);
         }
         glDrawBuffers(nTex, ColorAttachments);
     }
@@ -445,23 +391,23 @@ bool FrameBuffer::checkBuilt() const {
 }
 
 
-GLuint FrameBuffer::getDepthStencilTex() const {
+TextureCube FrameBuffer::getDepthStencilTex() const {
     if (!this->built) {
         std::cerr << "WARN::FRAMEBUFFER::getDepthStencilTex::FrameBuffer has not built\n";
-        return 0;
+        return {};
     }
     if (this->useRBO) {
         std::cerr << "ERROR::FRAMEBUFFER::Cannot read depth/stencil buffer when enabled render buffer\n";
-        return 0;
+        return {};
     }
-    return this->depth_stencil;
+    return {this->depth_stencil, width, height, stencil ? GL_DEPTH24_STENCIL8 : GL_DEPTH_COMPONENT};
 }
 
 
-GLuint FrameBuffer::getTexture(int i) const {
+Texture2D FrameBuffer::getTexture(int i) const {
     if (!this->built) {
         std::cerr << "WARN::FRAMEBUFFER::getTexture::FrameBuffer has not built\n";
-        return 0;
+        return {};
     }
     return this->colors[i];
 }
@@ -484,13 +430,18 @@ void FrameBuffer::blitDepth(const FrameBuffer &input, GLenum bits) const {
 }
 
 void swapTexture(FrameBuffer *f1, FrameBuffer *f2, int i1, int i2) {
-    GLuint tex1 = f1->colors[i1];
-    GLuint tex2 = f2->colors[i2];
-    f1->colors[i1] = tex2;
-    f2->colors[i2] = tex1;
+    Texture2D& tex1 = f1->colors[i1];
+    Texture2D& tex2 = f2->colors[i2];
+    if (tex1.internalFormat != tex2.internalFormat) {
+        std::cerr << "ERROR::SWAP_TEXTURE::" << "Texture " << tex1.id << "and texture" << tex2.id << "has different internal format\n";
+        return;
+    }
+    GLuint id1 = tex1.id;
+    tex1.id = tex2.id;
+    tex2.id = id1;
 
     f1->bind();
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i1, GL_TEXTURE_2D, tex2, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i1, GL_TEXTURE_2D, tex1.id, 0);
     f2->bind();
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i2, GL_TEXTURE_2D, tex1, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i2, GL_TEXTURE_2D, tex2.id, 0);
 }

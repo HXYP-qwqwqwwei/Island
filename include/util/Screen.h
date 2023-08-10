@@ -10,9 +10,9 @@
 #include "util/shaders.h"
 #include "Mesh.h"
 
-class Screen: public AbstractMesh<Vertex2D, uint>{
+class Screen: public AbstractMesh<Vertex2D, Texture2D>{
 public:
-    Screen(const std::vector<Vertex2D>& vertices, const std::vector<uint>& indices, const std::vector<GLuint>& textures);
+    Screen(const std::vector<Vertex2D>& vertices, const std::vector<uint>& indices, const std::vector<Texture2D>& textures);
     Screen();
     void draw(const Shader& shader) const override;
 

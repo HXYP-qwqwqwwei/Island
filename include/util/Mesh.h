@@ -15,10 +15,10 @@
 #include "texture_util.h"
 #include "AbstractMesh.hpp"
 
-class Mesh: public AbstractMesh<Vertex3D, Texture2D>{
+class Mesh: public AbstractMesh<Vertex3D, Texture2DWithType>{
     friend class Model;
 public:
-    Mesh(const std::vector<Vertex3D>& vertices, const std::vector<uint>& indices, const std::vector<Texture2D>& textures);
+    Mesh(const std::vector<Vertex3D>& vertices, const std::vector<uint>& indices, const std::vector<Texture2DWithType>& textures);
     Mesh();
     void draw(const Shader& shader) const override;
 

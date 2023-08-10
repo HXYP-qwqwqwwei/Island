@@ -4,15 +4,16 @@
 
 #include "util/texture_util.h"
 
-GLuint textures::MISSING;
-GLuint textures::BLACK_RGB;
-GLuint textures::WHITE_RGB;
-GLuint textures::BLACK_GRAY;
-GLuint textures::WHITE_GRAY;
-GLuint textures::FLAT_NORMALS;
-GLuint textures::FLAT_PARALLAX;
-GLuint textures::EMPTY_ENV_MAP;
-GLuint textures::EMPTY_SHADOW;
+Texture2D textures::MISSING;
+Texture2D textures::BLACK_RGB;
+Texture2D textures::WHITE_RGB;
+Texture2D textures::BLACK_GRAY;
+Texture2D textures::WHITE_GRAY;
+Texture2D textures::FLAT_NORMALS;
+Texture2D textures::FLAT_PARALLAX;
+Texture2D textures::NO_DIRECT_SHADOW;
+TextureCube textures::EMPTY_ENV_MAP;
+TextureCube textures::NO_POINT_SHADOW;
 
 
 
@@ -30,39 +31,38 @@ void textures::loadDefaultTextures(const std::string& dir) {
             dir
     );
 
-    EMPTY_SHADOW = load_cube_map(
+    NO_POINT_SHADOW = load_cube_map(
             {"pure_white_gray.png", "pure_white_gray.png", "pure_white_gray.png", "pure_white_gray.png", "pure_white_gray.png", "pure_white_gray.png"},
             dir
     );
 
-    EMPTY_POINT_LIGHT.shadow = EMPTY_SHADOW;
-    EMPTY_DIRECTIONAL_LIGHT.shadow = BLACK_GRAY;
+    NO_DIRECT_SHADOW = WHITE_GRAY;
 
 }
 
 
 
-GLuint load_texture(const char* path, const std::string& directory, GLint warp, GLint filter, bool flipUV) {
+Texture2D load_texture(const char* path, const std::string& directory, GLint warp, GLint filter, bool flipUV) {
     int width, height, nrChannels;
     std::string fullPath = directory + '/' + path;
     stbi_set_flip_vertically_on_load(flipUV);
     unsigned char* data = stbi_load(fullPath.c_str(), &width, &height, &nrChannels, 0);
     if (data == nullptr) {
         std::cerr << "ERROR::TEXTURE::Failed to load texture at \"" << fullPath << "\"\n";
-        return 0;
+        return {};
     }
     GLint format = tex_format(nrChannels);
     if (format == -1) {
         stbi_image_free(data);
-        return 0;
+        return {};
     }
-    GLuint id = createTexture2D(format, format, GL_UNSIGNED_BYTE, width, height, data, warp, filter, true);
+    auto tex = createTexture2D(format, format, GL_UNSIGNED_BYTE, width, height, data, warp, filter, true);
 
     stbi_image_free(data);
-    return id;
+    return tex;
 }
 
-GLuint createTexture2D(GLint format, GLint internalFormat, GLenum type, int width, int height, const void *data, GLint warp,
+Texture2D createTexture2D(GLint format, GLint internalFormat, GLenum type, int width, int height, const void *data, GLint warp,
                        GLint filter, bool genMipmap) {
     GLuint id;
     glGenTextures(1, &id);
@@ -76,27 +76,28 @@ GLuint createTexture2D(GLint format, GLint internalFormat, GLenum type, int widt
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, warp);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
-    return id;
+    return {id, width, height, internalFormat};
 }
 
 
-GLuint load_cube_map(std::initializer_list<std::string> paths, const std::string& directory, bool flipUV) {
+TextureCube load_cube_map(std::initializer_list<std::string> paths, const std::string& directory, bool flipUV) {
     GLuint id;
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_CUBE_MAP, id);
     int width, height, nrChannels;
     stbi_set_flip_vertically_on_load(flipUV);
+    GLint format;
     for (size_t i = 0; i < paths.size(); ++i) {
         std::string fullPath = directory + '/' + *(paths.begin() + i);
         unsigned char* data = stbi_load(fullPath.c_str(), &width, &height, &nrChannels, 0);
         if (data == nullptr) {
             std::cerr << "ERROR::TEXTURE::Failed to load texture at \"" << fullPath << "\"\n";
-            return 0;
+            return {};
         }
-        auto format = tex_format(nrChannels);
+        format = tex_format(nrChannels);
         if (format == -1) {
             stbi_image_free(data);
-            return 0;
+            return {};
         }
         glTexImage2D(
                 GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
@@ -109,7 +110,7 @@ GLuint load_cube_map(std::initializer_list<std::string> paths, const std::string
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    return id;
+    return {id, width, height, format};
 }
 
 constexpr const std::tuple<glm::vec3, glm::vec3, glm::vec3> FOCAL_VECTORS[6] {
@@ -122,10 +123,10 @@ constexpr const std::tuple<glm::vec3, glm::vec3, glm::vec3> FOCAL_VECTORS[6] {
 };
 
 
-Texture2D load_texture(const char* path, const std::string& directory, aiTextureType type, GLint warp, GLint filter, bool flipUV) {
-    GLuint id = load_texture(path, directory, warp, filter, flipUV);
+Texture2DWithType load_texture(const char* path, const std::string& directory, aiTextureType type, GLint warp, GLint filter, bool flipUV) {
+    Texture2D tex = load_texture(path, directory, warp, filter, flipUV);
     return {
-        id, type
+        tex, type
     };
 }
 

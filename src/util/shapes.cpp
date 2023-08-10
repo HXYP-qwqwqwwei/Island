@@ -4,7 +4,7 @@
 
 #include "util/shapes.h"
 
-Model shapes::Cube(float len, TexList<Texture2D> textures) {
+Model shapes::Cube(float len, TexList<Texture2DWithType> textures) {
     BuiltinMesh cube;
     float offset = len/2;
     cube.addVertex(offset, offset, offset, 1.0f, 1.0f)
@@ -40,7 +40,7 @@ Model shapes::Cube(float len, TexList<Texture2D> textures) {
     return Model({cube.build()});
 }
 
-Model shapes::Rectangle(float w, float h, TexList<Texture2D> textures, float maxU, float maxV) {
+Model shapes::Rectangle(float w, float h, TexList<Texture2DWithType> textures, float maxU, float maxV) {
     BuiltinMesh rect;
     float w_offset = w/2;
     float h_offset = h/2;
@@ -119,8 +119,8 @@ Model shapes::Ball(float radius, int segmentsXZ, int segmentsY) {
 
 
 
-Screen* shapes::ScreenRect(TexList<GLuint> tex) {
-    std::vector<GLuint> textures(tex);
+Screen* shapes::ScreenRect(TexList<Texture2D> tex) {
+    std::vector<Texture2D> textures(tex);
     std::vector<Vertex2D> vertices{
             {glm::vec2(1, 1), glm::vec2(1, 1)},
             {glm::vec2(-1, 1), glm::vec2(0, 1)},
@@ -135,7 +135,7 @@ Screen* shapes::ScreenRect(TexList<GLuint> tex) {
     return rect;
 }
 
-SkyBox* shapes::SkyBoxCube(GLuint texture) {
+SkyBox* shapes::SkyBoxCube(TextureCube texture) {
     std::vector<VertexCube> vertices {
             {glm::vec3(  .5f,    .5f,    .5f)},
             {glm::vec3(  .5f,   -.5f,    .5f)},
@@ -177,7 +177,7 @@ SkyBox* shapes::SkyBoxCube(GLuint texture) {
             20, 21, 22, 20, 22, 23
     };
 
-    std::vector<GLuint> textures = {texture};
+    std::vector<TextureCube> textures = {texture};
     return new SkyBox(vertices, indices, textures);
 }
 

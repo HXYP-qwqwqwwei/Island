@@ -5,15 +5,15 @@
 #include "util/SkyBox.h"
 
 SkyBox::SkyBox(const std::vector<VertexCube> &vertices, const std::vector<uint> &indices,
-               const std::vector<GLuint> &textures) : AbstractMesh(vertices, indices, textures) {
+               const std::vector<TextureCube> &textures) : AbstractMesh(vertices, indices, textures) {
     this->setupMesh();
 }
 
 void SkyBox::draw(const Shader &shader) const {
     int i = 0;
-    for (auto id : textures) {
+    for (auto tex : textures) {
         glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, id);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, tex.id);
         std::string name("texture");
         name.reserve(10);
         name += std::to_string(i);

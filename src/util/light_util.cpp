@@ -16,7 +16,7 @@ void setupPointLight(const Shader* shader, const PointLight& light, int idx) {
     shader->uniformVec2(header + "zNearFar",    light.zNearFar);
 
     glActiveTexture(GL_TEXTURE16 + idx);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, light.shadow);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, light.shadow.id);
     shader->uniformInt(header + "depthTex", 16 + idx);
 }
 
@@ -27,7 +27,7 @@ void setupPointLight(const Shader* shader, const PointLight& light) {
     shader->uniformVec2("pointLight.zNearFar",  light.zNearFar);
 
     glActiveTexture(GL_TEXTURE16);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, light.shadow);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, light.shadow.id);
     shader->uniformInt("pointLight.depthTex", 16);
 }
 
@@ -39,7 +39,7 @@ void setupDirectionalLight(const Shader* shader, const DirectionalLight& light) 
     shader->uniformMatrix4fv(Shader::LIGHT_SPACE_MATRIX, light.spaceMtx);
 
     glActiveTexture(GL_TEXTURE30);
-    glBindTexture(GL_TEXTURE_2D, light.shadow);
+    glBindTexture(GL_TEXTURE_2D, light.shadow.id);
     shader->uniformInt("directLight.depthTex", 30);
 }
 
@@ -52,9 +52,10 @@ void setupLight(const Shader* shader, const Light& light) {
 }
 
 Light::Light(const DirectionalLight& dLight, const std::vector<PointLight*>& pLights) {
+    EMPTY_POINT_LIGHT.shadow = textures::NO_POINT_SHADOW;
     this->dLight = dLight;
     int i;
-    size_t len = min(pLights.size(), MAX_PLIGHT_AMOUNT);
+    size_t len = MIN(pLights.size(), MAX_PLIGHT_AMOUNT);
     for (i = 0; i < len; ++i) {
         this->pLights[i] = *pLights[i];
     }

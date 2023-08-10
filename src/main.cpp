@@ -56,25 +56,25 @@ int main() {
     /**================ Load Models and Textures ================**/
     const std::string dir = "resources/textures";
     textures::loadDefaultTextures(dir);
-    Texture2D cubeDiff = load_texture("container2.png", dir, aiTextureType_DIFFUSE);
-    Texture2D cubeSpec = load_texture("container2_specular.png", dir, aiTextureType_SPECULAR);
-    Texture2D cubeRefl = load_texture("container2_specular.png", dir, aiTextureType_REFLECTION);
-    Texture2D cubeNorm = load_texture("container2_normals.png", dir, aiTextureType_NORMALS);
+    Texture2DWithType cubeDiff = load_texture("container2.png", dir, aiTextureType_DIFFUSE);
+    Texture2DWithType cubeSpec = load_texture("container2_specular.png", dir, aiTextureType_SPECULAR);
+    Texture2DWithType cubeRefl = load_texture("container2_specular.png", dir, aiTextureType_REFLECTION);
+    Texture2DWithType cubeNorm = load_texture("container2_normals.png", dir, aiTextureType_NORMALS);
 
 
-    Texture2D toyBoxDiff = load_texture("toy_box_diffuse.png", dir, aiTextureType_DIFFUSE);
-    Texture2D toyBoxSpec = {textures::WHITE_RGB, aiTextureType_SPECULAR};
-    Texture2D toyBoxNorm = load_texture("toy_box_normal.png", dir, aiTextureType_NORMALS);
-    Texture2D toyBoxPara = load_texture("toy_box_disp.png", dir, aiTextureType_DISPLACEMENT);
+    Texture2DWithType toyBoxDiff = load_texture("toy_box_diffuse.png", dir, aiTextureType_DIFFUSE);
+    Texture2DWithType toyBoxSpec = {textures::WHITE_RGB, aiTextureType_SPECULAR};
+    Texture2DWithType toyBoxNorm = load_texture("toy_box_normal.png", dir, aiTextureType_NORMALS);
+    Texture2DWithType toyBoxPara = load_texture("toy_box_disp.png", dir, aiTextureType_DISPLACEMENT);
 
-    Texture2D floorDiff = load_texture("plank_flooring_diff_1k.jpg", dir, aiTextureType_DIFFUSE);
-    Texture2D floorSpec = load_texture("plank_flooring_rough_1k.jpg", dir, aiTextureType_SPECULAR);
-    Texture2D floorNorm = load_texture("plank_flooring_nor_gl_1k.jpg", dir, aiTextureType_NORMALS);
-//    Texture2D floorPara = load_texture("plank_flooring_disp_1k.jpg", dir, aiTextureType_DISPLACEMENT);
-    Texture2D grassDiff = load_texture("grass.png", dir, aiTextureType_DIFFUSE, GL_CLAMP_TO_EDGE);
-    Texture2D windowTexDiff = load_texture("window_transparent.png", dir, aiTextureType_DIFFUSE);
+    Texture2DWithType floorDiff = load_texture("plank_flooring_diff_1k.jpg", dir, aiTextureType_DIFFUSE);
+    Texture2DWithType floorSpec = load_texture("plank_flooring_rough_1k.jpg", dir, aiTextureType_SPECULAR);
+    Texture2DWithType floorNorm = load_texture("plank_flooring_nor_gl_1k.jpg", dir, aiTextureType_NORMALS);
+//    Texture2DWithType floorPara = load_texture("plank_flooring_disp_1k.jpg", dir, aiTextureType_DISPLACEMENT);
+    Texture2DWithType grassDiff = load_texture("grass.png", dir, aiTextureType_DIFFUSE, GL_CLAMP_TO_EDGE);
+    Texture2DWithType windowTexDiff = load_texture("window_transparent.png", dir, aiTextureType_DIFFUSE);
 
-    GLuint skyBoxTex = load_cube_map(
+    TextureCube skyBoxTex = load_cube_map(
             {"skybox/right.jpg", "skybox/left.jpg", "skybox/top.jpg", "skybox/bottom.jpg", "skybox/front.jpg", "skybox/back.jpg"},
             dir
     );
@@ -111,18 +111,18 @@ int main() {
 #ifdef ISLAND_ENABLE_DEFERRED_SHADING
     // G-Buffer
     FrameBuffer gBuffer(GameScrWidth, GameScrHeight);
-    gBuffer.texture(RGBA_FLOAT)     // position & depth
-            .texture(RGB_FLOAT)      // specular
-            .texture(RGB_BYTE, 2)   // diffuse & specular
+    gBuffer.texture(GL_RGBA16F)     // position & depth
+            .texture(GL_RGB16F)      // specular
+            .texture(GL_RGB, 2)   // diffuse & specular
             .depthBuffer().useRenderBuffer()
             .build();
 
     FrameBuffer frameBuffer(GameScrWidth, GameScrHeight);
-    frameBuffer.texture(RGB_FLOAT, 2).depthBuffer().stencilBuffer().build();
+    frameBuffer.texture(GL_RGB16F, 2).depthBuffer().stencilBuffer().build();
 
     // ssao
     FrameBuffer ssaoFrame(GameScrWidth, GameScrHeight);
-    ssaoFrame.texture(RED_FLOAT, 1, GL_CLAMP_TO_EDGE, GL_NEAREST).build();
+    ssaoFrame.texture(GL_R16F, 1, GL_CLAMP_TO_EDGE, GL_NEAREST).build();
 
     GLsizei nSamples = 64;
     GLsizei noiseSize = 4;
@@ -151,7 +151,7 @@ int main() {
         );
     }
 
-    GLuint ssaoNoiseTex = createTexture2D(GL_RGB, GL_RGB16F, GL_FLOAT, noiseSize, noiseSize, &ssaoNoises[0], GL_REPEAT, GL_NEAREST, false);
+    Texture2D ssaoNoiseTex = createTexture2D(GL_RGB, GL_RGB16F, GL_FLOAT, noiseSize, noiseSize, &ssaoNoises[0], GL_REPEAT, GL_NEAREST, false);
 
 
 
@@ -169,11 +169,11 @@ int main() {
     double T0 = t0;
     int nFrames = 0;
     Camera camera(initPos);
-    GLuint envMap = textures::EMPTY_ENV_MAP;
+    TextureCube& envMap = textures::EMPTY_ENV_MAP;
 
     /**================ World and Lights ================**/
     InitWorld();
-    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(.0f), 4096, glm::vec3(1.0));
+    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(.0f), 4096, glm::vec3(.1));
     CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(10.0f), 4096);
     CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0), 4096);
     CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 4096);
@@ -263,22 +263,24 @@ int main() {
         });
         PutModelInfo(CUTOUT, &grasses);
 
-//        ModelInfo rgb_windows = MODEL_MANAGER.createInfo("rgb_window");
-//        glm::vec3 poses[3];
-//        poses[0] = glm::vec3(-2, 0, 2.5f);
-//        poses[1] = glm::vec3(1, 0, 1.5f);
-//        poses[2] = glm::vec3(-3, 0, 1.5f);
-//        auto cmp = [&] (const glm::vec3& v1, glm::vec3& v2) {
-//            return glm::distance(camera.getPos(), v1) > glm::distance(camera.getPos(), v2);
-//        };
-//        std::sort(poses, poses+3, cmp);
-//
-//        rgb_windows.addInstance({
-//                glm::translate(modelMtx, poses[0]),
-//                glm::translate(modelMtx, poses[1]),
-//                glm::translate(modelMtx, poses[2])
-//        });
-//        PutModelInfo(TRANSPARENT, &rgb_windows);
+/*
+        ModelInfo rgb_windows = MODEL_MANAGER.createInfo("rgb_window");
+        glm::vec3 poses[3];
+        poses[0] = glm::vec3(-2, 0, 2.5f);
+        poses[1] = glm::vec3(1, 0, 1.5f);
+        poses[2] = glm::vec3(-3, 0, 1.5f);
+        auto cmp = [&] (const glm::vec3& v1, glm::vec3& v2) {
+            return glm::distance(camera.getPos(), v1) > glm::distance(camera.getPos(), v2);
+        };
+        std::sort(poses, poses+3, cmp);
+
+        rgb_windows.addInstance({
+                glm::translate(modelMtx, poses[0]),
+                glm::translate(modelMtx, poses[1]),
+                glm::translate(modelMtx, poses[2])
+        });
+        PutModelInfo(TRANSPARENT, &rgb_windows);
+*/
 
         /*================ Render World ================*/
         SetupPVMatrix(camera);
@@ -299,10 +301,12 @@ int main() {
 #endif
 
         /*================ sky box ================*/
-////        SkyShader.use();
-////        SkyShader.uniformMatrix4fv(Shader::PROJECTION, proj);
-////        SkyShader.uniformMatrix4fv("view", glm::mat4(glm::mat3(view)));
-////        skyBox->draw(SkyShader);
+/*
+        SkyShader.use();
+        SkyShader.uniformMatrix4fv(Shader::PROJECTION, proj);
+        SkyShader.uniformMatrix4fv("view", glm::mat4(glm::mat3(view)));
+        skyBox->draw(SkyShader);
+*/
 
 #ifdef ISLAND_ENABLE_DEFERRED_SHADING
         BindFrameBuffer(&ssaoFrame);
@@ -317,6 +321,7 @@ int main() {
 
         /*================ Post-Production ================*/
 #ifdef ISLAND_ENABLE_HDR
+        // Bloom
         Blur(1, 10);
 
         BindFrameBuffer(nullptr);

@@ -5,9 +5,6 @@
 #ifndef ISLAND_TEXTURE_UTIL_H
 #define ISLAND_TEXTURE_UTIL_H
 
-#define SRGB 0
-#define RGB 1
-
 #include <vector>
 #include <string>
 #include <tuple>
@@ -17,7 +14,7 @@
 #include "glm/glm.hpp"
 #include "glad/glad.h"
 #include "assimp/defs.h"
-#include "light_util.h"
+
 
 struct Vertex2D {
     glm::vec2 position;
@@ -31,40 +28,49 @@ struct Vertex3D {
     glm::vec3 tangent;
 };
 
-struct Vertex3DNoTex {
-    glm::vec3 position;
-    glm::vec3 normal;
-};
-
 struct VertexCube {
     glm::vec3 position;
 };
 
+struct TextureCube {
+    GLuint id = 0;
+    GLsizei width = 4;
+    GLsizei height = 4;
+    GLint internalFormat = GL_RGB;
+};
+
 struct Texture2D {
     GLuint id = 0;
+    GLsizei width = 4;
+    GLsizei height = 4;
+    GLint internalFormat = GL_RGB;
+};
+
+struct Texture2DWithType: public Texture2D{
     aiTextureType type = aiTextureType_DIFFUSE;
 };
 
 namespace textures {
-    extern GLuint MISSING;
-    extern GLuint BLACK_RGB;
-    extern GLuint WHITE_RGB;
-    extern GLuint BLACK_GRAY;
-    extern GLuint WHITE_GRAY;
-    extern GLuint FLAT_NORMALS;
-    extern GLuint FLAT_PARALLAX;
-    extern GLuint EMPTY_ENV_MAP;
-    extern GLuint EMPTY_SHADOW;
+    extern Texture2D MISSING;
+    extern Texture2D BLACK_RGB;
+    extern Texture2D WHITE_RGB;
+    extern Texture2D BLACK_GRAY;
+    extern Texture2D WHITE_GRAY;
+    extern Texture2D FLAT_NORMALS;
+    extern Texture2D FLAT_PARALLAX;
+    extern Texture2D NO_DIRECT_SHADOW;
+    extern TextureCube EMPTY_ENV_MAP;
+    extern TextureCube NO_POINT_SHADOW;
 
     void loadDefaultTextures(const std::string& dir);
 }
 
-GLuint createTexture2D(GLint format, GLint internalFormat, GLenum type, int width, int height, const void *data, GLint warp,
+Texture2D createTexture2D(GLint format, GLint internalFormat, GLenum type, int width, int height, const void *data, GLint warp,
                        GLint filter, bool genMipmap);
 GLint tex_format(int nrChannels);
-GLuint load_texture(const char* path, const std::string& directory, GLint warp = GL_REPEAT, GLint filter = GL_LINEAR, bool flipUV = true);
-GLuint load_cube_map(std::initializer_list<std::string> paths, const std::string& directory, bool flipUV = false);
-Texture2D load_texture(const char* path, const std::string& directory, aiTextureType type, GLint warp = GL_REPEAT, GLint filter = GL_LINEAR, bool flipUV = true);
+Texture2D load_texture(const char* path, const std::string& directory, GLint warp = GL_REPEAT, GLint filter = GL_LINEAR, bool flipUV = true);
+TextureCube load_cube_map(std::initializer_list<std::string> paths, const std::string& directory, bool flipUV = false);
+Texture2DWithType load_texture(const char* path, const std::string& directory, aiTextureType type, GLint warp = GL_REPEAT, GLint filter = GL_LINEAR, bool flipUV = true);
 
 
 #endif //ISLAND_TEXTURE_UTIL_H

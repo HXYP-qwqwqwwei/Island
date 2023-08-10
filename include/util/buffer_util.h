@@ -8,20 +8,8 @@
 #include <stack>
 #include "glad/glad.h"
 #include "defs.h"
+#include "texture_util.h"
 
-#define RGB_BYTE    0x0
-#define RGB_FLOAT   0x1
-#define RGBA_BYTE   0x2
-#define RGBA_FLOAT  0x3
-#define RED_BYTE    0x4
-#define RED_FLOAT   0x5
-#define DEPTH       0x2                 // 1
-#define STENCIL     0x4                 // 2
-//#define MSAA(S)     (((S-1) & 0xF)<<3)  // 3 ~ 6
-//#define MRT(N)      (((N-1) & 0x7)<<8)  // 8 ~ 10
-
-#define MSAA_SAMPLES(M) (((M >> 3) & 0xF) + 1)
-#define MRT_TARGETS(M)  (((M >> 8) & 0x7) + 1)
 
 class Buffer {
 public:
@@ -46,7 +34,7 @@ void swapTexture(FrameBuffer* f1, FrameBuffer* f2, int i1 = 0, int i2 = 0);
 
 class FrameBuffer {
 private:
-    std::vector<GLuint> colors;
+    std::vector<Texture2D> colors;
     GLuint object        = 0;
     GLuint depth_stencil = 0;
     bool built      = false;
@@ -71,34 +59,24 @@ public:
     void unbind() const;
     void blitDepth(const FrameBuffer& input, GLenum bits) const;
     [[nodiscard]] bool checkBuilt() const;
-    [[nodiscard]] GLuint getDepthStencilTex() const;
-    [[nodiscard]] GLuint getTexture(int i = 0) const;
+    [[nodiscard]] TextureCube getDepthStencilTex() const;
+    [[nodiscard]] Texture2D getTexture(int i = 0) const;
 };
 
 
 class FrameBufferCube {
 public:
-    FrameBufferCube(GLsizei length, int mode);
-    [[nodiscard]] GLuint getDepthCubeMap() const;
-    [[nodiscard]] GLuint getTextureCubeTex() const;
+    FrameBufferCube(GLsizei length, GLint colorFormat, bool depth);
+    [[nodiscard]] TextureCube getDepthCubeMap() const;
+    [[nodiscard]] TextureCube getTextureCubeTex() const;
     void bind() const;
     const GLsizei length;
+    const GLint colorFormat;
 private:
     GLuint object{};
     GLuint colorCube{};
     GLuint depthCube{};
 };
 
-
-struct TextureBuffer {
-    GLuint id = 0;
-    TextureBuffer(GLsizei width, GLsizei height, int mode, GLint warp = GL_CLAMP_TO_EDGE, GLint filter = GL_LINEAR);
-    void free();
-};
-
-
-class GBuffer {
-
-};
 
 #endif //ISLAND_BUFFER_UTIL_H

@@ -5,7 +5,7 @@
 #include "util/Screen.h"
 
 Screen::Screen(const std::vector<Vertex2D> &vertices, const std::vector<uint> &indices,
-               const std::vector<GLuint> &textures): AbstractMesh<Vertex2D, uint>(vertices, indices, textures) {
+               const std::vector<Texture2D> &textures): AbstractMesh<Vertex2D, Texture2D>(vertices, indices, textures) {
     this->setupMesh();
 }
 
@@ -15,9 +15,9 @@ Screen::Screen() = default;
 
 void Screen::draw(const Shader &shader) const {
     int i = 0;
-    for (auto id : textures) {
+    for (auto tex : textures) {
         glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_2D, id);
+        glBindTexture(GL_TEXTURE_2D, tex.id);
         std::string name("texture");
         name.reserve(10);
         name += std::to_string(i);

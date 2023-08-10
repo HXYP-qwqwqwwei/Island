@@ -6,7 +6,7 @@
 #include "util/texture_util.h"
 
 Mesh::Mesh(const std::vector<Vertex3D> &vertices, const std::vector<uint> &indices,
-           const std::vector<Texture2D> &textures): AbstractMesh<Vertex3D, Texture2D>(vertices, indices, textures) {
+           const std::vector<Texture2DWithType> &textures): AbstractMesh<Vertex3D, Texture2DWithType>(vertices, indices, textures) {
     this->setupMesh();
 }
 
@@ -36,11 +36,11 @@ void Mesh::setupTextures(const Shader &shader) const {
     int nPara = 0;
 
     shader.use();
-    shader.setDefaultTexture(aiTextureType_DIFFUSE,      textures::MISSING,       28);
-    shader.setDefaultTexture(aiTextureType_SPECULAR,     textures::BLACK_RGB,     27);
-    shader.setDefaultTexture(aiTextureType_NORMALS,      textures::FLAT_NORMALS,  26);
-    shader.setDefaultTexture(aiTextureType_REFLECTION,   textures::BLACK_RGB,     25);
-    shader.setDefaultTexture(aiTextureType_DISPLACEMENT, textures::FLAT_PARALLAX, 24);
+    shader.setDefaultTexture(aiTextureType_DIFFUSE,      textures::MISSING.id,       28);
+    shader.setDefaultTexture(aiTextureType_SPECULAR,     textures::BLACK_RGB.id,     27);
+    shader.setDefaultTexture(aiTextureType_NORMALS,      textures::FLAT_NORMALS.id,  26);
+    shader.setDefaultTexture(aiTextureType_REFLECTION,   textures::BLACK_RGB.id,     25);
+    shader.setDefaultTexture(aiTextureType_DISPLACEMENT, textures::FLAT_PARALLAX.id, 24);
 
     int i = 0;
     for (const auto& tex : textures) {

@@ -27,13 +27,13 @@ public:
 
 private:
     std::vector<Mesh> meshes;
-    std::unordered_map<std::string, Texture2D> loadedTextures{};
+    std::unordered_map<std::string, Texture2DWithType> loadedTextures{};
     std::string directory;
 
     void loadModel(const std::string& path);
     void processNode(const aiNode* root, const aiScene* scene);
     void processMesh(const aiMesh* mesh, const aiScene* scene);
-    std::vector<Texture2D> loadTextures(const aiMaterial *material, aiTextureType type);
+    std::vector<Texture2DWithType> loadTextures(const aiMaterial *material, aiTextureType type);
 
 };
 
