@@ -59,11 +59,13 @@ void render(const Model* model, RenderType type, const Camera& camera, const glm
     render(model, type, camera, &transMtx, 1, light);
 }
 
-void renderShadow(const Model* model, const glm::mat4* transMtx, size_t amount, const DLight& light) {
+void renderShadow(const Model* model, const glm::mat4* transMtx, size_t amount, const DLight& light, GLsizei level) {
     const Shader* shader = DepthShader;
     shader->use();
 
-    setupDirectionalLight(shader, light);
+    setupDLightNoShadow(shader, light);
+    shader->uniformMatrix4fv(Shader::PVMatrix, light.shadowMaps[level].LiSpacePV);
+
     Buffer mtxBuf(GL_ARRAY_BUFFER);
     mtxBuf.putData(amount * SZ_MAT4F, transMtx);
     model->draw(*shader, mtxBuf);
@@ -141,8 +143,8 @@ void lightGBuffer(const Mesh *mesh, const PLight &light) {
     shader->use();
     setupPointLight(shader, light);
     glm::mat4 mtx(1.0);
+    mtx = glm::translate(mtx, light.pos);
     mtx = glm::scale(mtx, glm::vec3(10.0));
-    mtx = glm::translate(mtx, light.pos * glm::vec3(1.0/10));
 
     Buffer mtxBuf(GL_ARRAY_BUFFER);
     mtxBuf.putData(SZ_MAT4F, &mtx);
@@ -161,10 +163,10 @@ void lightGBufferNoShadow(const Mesh *mesh, PLight const *const *lights, size_t 
     auto* mats = new TransWithLight[amount];
     for (int i = 0; i < amount; ++i) {
         auto light = lights[i];
-        glm::mat4 mtx(1.0);
-        mtx = glm::scale(mtx, glm::vec3(10.0));
-        mtx = glm::translate(mtx, light->pos * glm::vec3(1.0/10));
-        mats[i].trans    = mtx;
+        glm::mat4 move(1.0), scale(1.0);
+        scale = glm::scale(scale, glm::vec3(10.0f));
+        move = glm::translate(move, light->pos);
+        mats[i].trans    = move * scale;
         mats[i].center   = light->pos;
         mats[i].color    = light->color;
         mats[i].attenu   = light->attenu;

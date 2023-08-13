@@ -48,7 +48,7 @@ void render(const Model* model, RenderType type, const Camera& camera, const glm
 
 void render(const Model* model, RenderType type, const Camera& camera, const glm::mat4& transMtx, const Light& light);
 
-void renderShadow(const Model* model, const glm::mat4* transMtx, size_t amount, const DLight& light);
+void renderShadow(const Model* model, const glm::mat4* transMtx, size_t amount, const DLight& light, GLsizei level);
 
 void renderPointShadow(const Model* model, const glm::mat4* transMtx, size_t amount, const PLight& light);
 

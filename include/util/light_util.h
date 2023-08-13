@@ -13,6 +13,13 @@
 
 #define MAX_PLIGHT_AMOUNT 4
 
+struct CascadedShadowMap {
+    Texture2D tex;
+    GLfloat farDepth{0.0f};
+    glm::mat4 LiSpacePV{1.0f};
+    glm::mat4 V2LiSpacePV{1.0f};   // from V-Space to LiPV-Space
+};
+
 struct PointLight {
     glm::vec3 color     = glm::vec3(0.0f);
     glm::vec3 pos       = glm::vec3(0.0f);
@@ -23,10 +30,9 @@ struct PointLight {
 
 struct DirectionalLight {
     glm::vec3 color = glm::vec3(0.0f);
-    glm::vec3 injection = glm::vec3(1.0f, 0, 0);
+    glm::vec3 injection = glm::vec3(.0f, -1.0, 0);
     glm::vec3 ambient = glm::vec3(0.1f);
-    glm::mat4 spaceMtx = glm::mat4(1.0f);
-    TextureCube shadow;
+    std::vector<CascadedShadowMap> shadowMaps;
 };
 
 extern PointLight EMPTY_POINT_LIGHT;
@@ -44,6 +50,7 @@ struct Light {
 void setupPointLight(const Shader* shader, const PointLight& light, int idx);
 void setupPointLight(const Shader* shader, const PointLight& light);
 void setupDirectionalLight(const Shader* shader, const DirectionalLight& light);
+void setupDLightNoShadow(const Shader* shader, const DirectionalLight& light);
 void setupLight(const Shader* shader, const Light& light);
 
 #endif //ISLAND_LIGHT_UTIL_H

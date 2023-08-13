@@ -391,7 +391,7 @@ bool FrameBuffer::checkBuilt() const {
 }
 
 
-TextureCube FrameBuffer::getDepthStencilTex() const {
+Texture2D FrameBuffer::getDepthStencilTex() const {
     if (!this->built) {
         std::cerr << "WARN::FRAMEBUFFER::getDepthStencilTex::FrameBuffer has not built\n";
         return {};
