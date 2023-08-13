@@ -10,6 +10,8 @@
 #include <unordered_map>
 #include <algorithm>
 #include <functional>
+#include <cmath>
+#include <limits>
 #include "Model.h"
 #include "render_util.h"
 #include "Screen.h"
@@ -35,12 +37,12 @@ void EnableStencilTest(GLenum sFail);
 void DisableStencilTest();
 
 void RenderModelsInWorld(Camera& camera, RenderType type);
-void SetupPVMatrix(Camera& camera, float zNear = 0.1f, float zFar = 100.0f);
+void SetupPVMatrix(Camera& camera);
 void RenderWorldGBuffer(Camera& camera, RenderType type);
-void RenderShadow();
+void RenderShadow(Camera& camera);
 uint CreatePointLight(glm::vec3 pos, glm::vec3 color, GLsizei shadowRes, glm::vec3 attenu = {1, 0, 1}, glm::vec2 zNearFar = {0.1, 25.0});
 uint CreatePointLightNoShadow(glm::vec3 pos, glm::vec3 color, glm::vec3 attenu = {1, 0, 1});
-void SetDirectLight(glm::vec3 injection, glm::vec3 color, GLsizei shadowRes, glm::vec3 ambient = glm::vec3(0.01f));
+void SetDirectLight(glm::vec3 injection, glm::vec3 color, GLsizei shadowRes, GLsizei csmLevels, glm::vec3 ambient = glm::vec3(0.01f));
 void RenderSSAO(const FrameBuffer& gBuffer, const glm::vec3* samples, size_t n, const Texture2D& texNoise, GLfloat radius = 1.0, GLfloat power = 1.0);
 void ProcessGBuffer(const FrameBuffer& gBuffer, const Texture2D& ssao = textures::WHITE_GRAY);
 void RenderFrame(const FrameBuffer& frame, std::initializer_list<int> indices);

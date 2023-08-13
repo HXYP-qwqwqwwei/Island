@@ -6,9 +6,9 @@ layout (location = 3) in mat4 vModel;   // location: 3, 4, 5, 6
 
 out vec2 fTexUV;
 
-uniform mat4 lightSpaceMtx;
+uniform mat4 ProjViewMatrix;
 
 void main() {
-    gl_Position = lightSpaceMtx * vModel * vec4(vPos, 1.0);
+    gl_Position = ProjViewMatrix * vModel * vec4(vPos, 1.0);
     fTexUV      = vTexUV;
 }

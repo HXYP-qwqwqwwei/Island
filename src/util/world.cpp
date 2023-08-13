@@ -11,7 +11,7 @@ static std::vector<PointLight*> PointLightsNoShadow;
 static std::vector<FrameBufferCube*> PointShadowBuffers;
 
 static DirectionalLight DirectLight;
-static FrameBuffer* DirectShadowBuffer = nullptr;
+static std::vector<FrameBuffer*> CSMBuffers;
 
 static Buffer* PVMatBuffer;
 static FrameBuffer* BoundFrame;
@@ -23,6 +23,8 @@ ModelManager MODEL_MANAGER;
 
 
 void UnbindAllTextures();
+
+void PutCSMFrustums(Camera &camera, std::vector<CascadedShadowMap> &shadows);
 
 void InitWorld() {
     glEnable(GL_STENCIL_TEST);
@@ -113,7 +115,7 @@ void RenderWorldGBuffer(Camera& camera, RenderType type) {
 }
 
 
-void SetupPVMatrix(Camera &camera, float zNear, float zFar) {
+void SetupPVMatrix(Camera &camera) {
     GLsizei width;
     GLsizei height;
 
@@ -127,7 +129,7 @@ void SetupPVMatrix(Camera &camera, float zNear, float zFar) {
     float aspect = (float)width / (float)height;
 
     const glm::mat4 view = camera.getView();
-    const glm::mat4 proj = glm::perspective(glm::radians(45.0f), aspect, zNear, zFar);
+    const glm::mat4 proj = glm::perspective(glm::radians(45.0f), aspect, camera.near(), camera.far());
 
     // uniform buffer -- projection and view matrix
     // set view and projection
@@ -256,29 +258,29 @@ void RenderWorld(Camera& camera, FrameBuffer& frame) {
 //}
 
 
-
-void RenderShadow() {
-    auto* buffer = DirectShadowBuffer;
-    if (buffer == nullptr) {
-        return;
-    }
-    glViewport(0, 0, buffer->width, buffer->height);
-    buffer->bind();
-    glEnable(GL_DEPTH_TEST);
-    glClear(GL_DEPTH_BUFFER_BIT);
-
-    const std::vector<const ModelInfo*>* models;
+void RenderShadow(Camera& camera) {
+    const std::vector<const ModelInfo *> *models;
     static const std::vector<RenderType> types{SOLID, CUTOUT};
 
-
     /*================== Directional Light Shadow ==================*/
-    for (RenderType type: types) {
-        models = &Models[type];
-        for (auto* info: *models) {
-            renderShadow(MODEL_MANAGER[info->id], &info->transMatrices[0], info->transMatrices.size(), DirectLight);
+    PutCSMFrustums(camera, DirectLight.shadowMaps);
+
+    for (GLsizei i = 0; i < CSMBuffers.size(); ++i) {
+        auto buffer = CSMBuffers[i];
+        glViewport(0, 0, buffer->width, buffer->height);
+        buffer->bind();
+        glEnable(GL_DEPTH_TEST);
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+
+        for (RenderType type: types) {
+            models = &Models[type];
+            for (auto *info: *models) {
+                renderShadow(MODEL_MANAGER[info->id], &info->transMatrices[0], info->transMatrices.size(), DirectLight, i);
+            }
         }
+        buffer->unbind();
     }
-    buffer->unbind();
 
 
     /*================== Point Light Shadow ==================*/
@@ -300,6 +302,125 @@ void RenderShadow() {
         }
     }
     UnbindAllTextures();
+}
+
+void PutCSMFrustums(Camera &camera, std::vector<CascadedShadowMap> &csmShadows) {
+    float aspect = (float)GameScrWidth / (float)GameScrHeight;
+    size_t nSeg = csmShadows.size();
+
+    struct ViewFrustum {
+        GLfloat near;
+        GLfloat far;
+        glm::vec3 vertices[8]{};
+    };
+
+    std::vector<ViewFrustum> viewFrustums;
+    viewFrustums.reserve(nSeg);
+
+    // 视锥体分块
+    GLfloat near = camera.near();
+    GLfloat far = camera.far();
+    GLfloat fragFN = far / near;
+    GLfloat lambda = 0.6;
+    GLfloat ni = near;
+    GLfloat fi;
+    for (GLsizei i = 1; i <= nSeg; ++i) {
+        GLfloat si = GLfloat(i)/GLfloat(nSeg);
+        fi = lambda * near * pow(fragFN, si) + (1-lambda) * (near + (far-near) * si);
+        viewFrustums.emplace_back(ni, fi * 1.05f);
+        ni = fi;
+    }
+
+    // 计算各段视锥体的顶点坐标（世界空间）
+    const glm::mat4 view = camera.getView();
+    glm::mat3 view3x3T = glm::transpose(glm::mat3(view));
+    const glm::vec3& right = view3x3T[0];
+    const glm::vec3& up    = view3x3T[1];
+    const glm::vec3& focal = view3x3T[2];
+    GLfloat fov = glm::radians(45.0f);
+    for (auto& frustum: viewFrustums) {
+        ni = frustum.near;
+        fi = frustum.far;
+        GLfloat hNear = ni * glm::tan(fov/2);
+        GLfloat wNear = hNear * aspect;
+        GLfloat hFar  = fi * glm::tan(fov/2);
+        GLfloat wFar  = hFar  * aspect;
+        glm::vec3 vNear = camera.getPos() - focal * ni;
+        glm::vec3 vFar  = camera.getPos() - focal * fi;
+
+        frustum.vertices[0] = vNear + right*wNear + up*hNear;   // ru
+        frustum.vertices[1] = vNear - right*wNear + up*hNear;   // lu
+        frustum.vertices[2] = vNear - right*wNear - up*hNear;   // ld
+        frustum.vertices[3] = vNear + right*wNear - up*hNear;   // rd
+
+        frustum.vertices[4] = vFar + right*wFar + up*hFar;      // ru
+        frustum.vertices[5] = vFar - right*wFar + up*hFar;      // lu
+        frustum.vertices[6] = vFar - right*wFar - up*hFar;      // ld
+        frustum.vertices[7] = vFar + right*wFar - up*hFar;      // rd
+    }
+
+    Camera LiCam(DirectLight.injection * -30.0f , -glm::normalize(DirectLight.injection));
+    const glm::mat4 LiView = LiCam.getView();
+    const glm::mat4 view_inv = glm::inverse(view);
+
+    for (size_t i = 0; i < nSeg; ++i) {
+        const auto& frustum = viewFrustums[i];
+        auto& shadow = csmShadows[i];
+
+        // 为每个分段计算光空间对应的变换矩阵
+        GLfloat zMax = -FLOAT_INF;  // LiSpace
+        GLfloat zMin =  FLOAT_INF;  // LiSpace
+        for (const auto& v: frustum.vertices) {
+            glm::vec4 v_LiView = LiView * glm::vec4(v, 1.0);
+            zMax = MAX(zMax, v_LiView.z);
+            zMin = MIN(zMin, v_LiView.z);
+        }
+        zMax += 10.0f;
+        glm::mat4 LiProj = glm::ortho(-1.0f, +1.0f, -1.0f, +1.0f, -zMax, -zMin);
+        const glm::mat4 LiPV = LiProj * LiView;
+
+        // 为了使视锥体恰好被光源的PV空间包围，对P矩阵的上下左右平面进行放缩
+        // 首先使用NDC的左右/上下平面作正射投影，计算xy坐标最大值
+        glm::vec2 xyMax(-FLOAT_INF, -FLOAT_INF);  // LiSpace
+        glm::vec2 xyMin( FLOAT_INF,  FLOAT_INF);  // LiSpace
+        for (const auto& v: frustum.vertices) {
+            glm::vec4 v_LProjView = LiPV * glm::vec4(v, 1.0);
+            v_LProjView /= v_LProjView.w;
+            xyMax.x = MAX(xyMax.x, v_LProjView.x);
+            xyMax.y = MAX(xyMax.y, v_LProjView.y);
+            xyMin.x = MIN(xyMin.x, v_LProjView.x);
+            xyMin.y = MIN(xyMin.y, v_LProjView.y);
+        }
+
+        // 利用得到的左右/上下平面，计算放缩矩阵
+        // [ Sx  0   0   Ox ] [ 1    0     0            0      ]     [ 2/(r-l)    0        0     -(r+l)/(r-l) ]
+        // |     Sy      Oy | |      1     0            0      |     |         2/(t-b)           -(t+b)/(t-b) |
+        // |         1      | |         -2/(f-n)  -(f+n)/(f-n) | ==> |                 -2/(f-n)  -(f+n)/(f-n) |
+        // [             1  ] [                         1      ]     [                                 1      ]
+        // 根据上式计算Sx, Sy, Ox, Oy
+        // Sx = 2/(r-l),    Sy = 2/(t-b),   Ox = -(r+l)/(r-l),  Oy = -(t+b)/(t-b)
+        glm::vec2 scale = 2.0f / (xyMax - xyMin);
+        glm::vec2 offset = -0.5f * (xyMax + xyMin) * scale;
+
+        glm::mat4 crop {
+                scale.x,  0,        0,        0,
+                0,        scale.y,  0,        0,
+                0,        0,        1.0f,     0,
+                offset.x, offset.y, 0,        1.0f
+        };
+
+        glm::mat4 NDC_to_01 {
+                .5f,  0 ,  0 ,  0 , // [ .5   0   0  .5 ]
+                0 , .5f,  0 ,  0 ,  // |     .5   0  .5 |
+                0 ,  0 , .5f,  0 ,  // |         .5  .5 |
+                .5f, .5f, .5f,  1   // [              1 ]
+        };
+        shadow.LiSpacePV = crop * LiPV;
+        shadow.V2LiSpacePV = NDC_to_01 * shadow.LiSpacePV * view_inv;
+
+        // 最后设置视锥体的远平面在投影空间的深度（范围为[zNear, zFar]，和G缓冲中的深度一致），以供片段着色器比较
+        shadow.farDepth = frustum.far;
+    }
 }
 
 void UnbindAllTextures() {
@@ -329,20 +450,22 @@ uint CreatePointLightNoShadow(glm::vec3 pos, glm::vec3 color, glm::vec3 attenu) 
 
 
 
-void SetDirectLight(glm::vec3 injection, glm::vec3 color, GLsizei shadowRes, glm::vec3 ambient) {
-    Camera dLightCamera(injection * -30.0f , -glm::normalize(injection));
-    glm::mat4 dLightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.01f, 1000.0f);
-    glm::mat4 dLightView = dLightCamera.getView();
-
-    delete DirectShadowBuffer;
+void SetDirectLight(glm::vec3 injection, glm::vec3 color, GLsizei shadowRes, GLsizei csmLevels, glm::vec3 ambient) {
+    for (auto buffer: CSMBuffers) {
+        delete buffer;
+    }
+    CSMBuffers.clear();
+    CSMBuffers.reserve(csmLevels);
 
     DirectLight = {color, injection, ambient};
-    auto* shadowBuffer = new FrameBuffer(shadowRes, shadowRes);
-    shadowBuffer->depthBuffer().build();
-    DirectLight.shadow = shadowBuffer->getDepthStencilTex();
-    DirectLight.spaceMtx = dLightProj * dLightView;
+    DirectLight.shadowMaps.reserve(csmLevels);
 
-    DirectShadowBuffer = shadowBuffer;
+    for (GLsizei i = 0; i < csmLevels; ++i) {
+        auto* shadowBuffer = new FrameBuffer(shadowRes, shadowRes);
+        shadowBuffer->depthBuffer().build();
+        DirectLight.shadowMaps.emplace_back(shadowBuffer->getDepthStencilTex());
+        CSMBuffers.push_back(shadowBuffer);
+    }
 }
 
 void ProcessGBuffer(const FrameBuffer& gBuffer, const Texture2D& ssao) {

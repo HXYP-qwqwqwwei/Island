@@ -87,7 +87,7 @@ float pointLightShadow(samplerCube depthTex, vec3 fPos, vec3 lightPos, vec3 norm
     vec3 injection = world * (fPos - lightPos);
     float currDepth = length(injection);
 
-    float bias = max(0.06 * (1.0 - dot(world * norm, -normalize(injection))), 0.002);
+    float bias = max(0.1 * (1.0 - dot(world * norm, -normalize(injection))), 0.002);
     // PCF
     float shadow = 0;
     for (int i = 0; i < 20; ++i) {

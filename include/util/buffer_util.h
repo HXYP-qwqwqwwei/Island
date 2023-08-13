@@ -59,7 +59,7 @@ public:
     void unbind() const;
     void blitDepth(const FrameBuffer& input, GLenum bits) const;
     [[nodiscard]] bool checkBuilt() const;
-    [[nodiscard]] TextureCube getDepthStencilTex() const;
+    [[nodiscard]] Texture2D getDepthStencilTex() const;
     [[nodiscard]] Texture2D getTexture(int i = 0) const;
 };
 

@@ -173,11 +173,11 @@ int main() {
 
     /**================ World and Lights ================**/
     InitWorld();
-    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(.0f), 4096, glm::vec3(.1));
-    CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(10.0f), 4096);
-    CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0), 4096);
-    CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 4096);
-    CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 4096);
+    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(0.0f), 1024, 4, glm::vec3(.1));
+    CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(10.0f), 512);
+    CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0), 512);
+    CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 512);
+    CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 512);
 
 //    CreatePointLightNoShadow(glm::vec3(-3, 1, -3), glm::vec3(10.0f));
 //    CreatePointLightNoShadow(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0));
@@ -213,8 +213,6 @@ int main() {
             nFrames = 0;
             T0 = T1;
         }
-
-//        pLight.pos = glm::vec3(3*cos(t1) - 1, 1, 3*sin(t1) - 1);
 
         glm::mat4 modelMtx(1.0f);
         // camera
@@ -284,7 +282,7 @@ int main() {
 
         /*================ Render World ================*/
         SetupPVMatrix(camera);
-        RenderShadow();
+        RenderShadow(camera);
 #ifdef ISLAND_ENABLE_DEFERRED_SHADING
         BindFrameBuffer(&gBuffer);
         EnableDepthTest();

@@ -57,7 +57,46 @@ public:
 
     /*===== Uniform names =====*/
 //    static constexpr const char MODEL[]                 = "model";
-    static constexpr const char LIGHT_SPACE_MATRIX[]    = "lightSpaceMtx";
+    static constexpr const char PVMatrix[] = "ProjViewMatrix";
+
+    struct PointLight {
+        static constexpr const char POS[] = "pointLight.pos";
+        static constexpr const char COLOR[] = "pointLight.color";
+        static constexpr const char ATTENU[] = "pointLight.attenu";
+        static constexpr const char Z_NEAR_FAR[] = "pointLight.zNearFar";
+
+    };
+
+    struct DirectLight {
+        static constexpr const char AMBIENT[] = "directLight.ambient";
+        static constexpr const char COLOR[] = "directLight.color";
+        static constexpr const char INJECTION[] = "directLight.injection";
+        static constexpr const char CSM_LEVELS[] = "directLight.csmLevels";
+
+        static constexpr const char CSM_MAPS[4][23] = {
+                "directLight.csmMaps[0]",
+                "directLight.csmMaps[1]",
+                "directLight.csmMaps[2]",
+                "directLight.csmMaps[3]",
+        };
+
+        static constexpr const char LiSPACE_MATRICES[4][31] = {
+                "directLight.LiSpaceMatrices[0]",
+                "directLight.LiSpaceMatrices[1]",
+                "directLight.LiSpaceMatrices[2]",
+                "directLight.LiSpaceMatrices[3]",
+        };
+
+        static constexpr const char FAR_DEPTHS[4][25] = {
+                "directLight.farDepths[0]",
+                "directLight.farDepths[1]",
+                "directLight.farDepths[2]",
+                "directLight.farDepths[3]",
+        };
+
+
+    };
+
     static constexpr const char VIEW_POS[]              = "viewPos";
     static constexpr const char COLOR[]                 = "color";
     static constexpr const char GAUSSIAN_HORIZONTAL[]   = "horizontal";

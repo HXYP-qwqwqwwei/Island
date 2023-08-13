@@ -8,12 +8,7 @@ using namespace glm;
 const vec3 Camera::VERTICAL_UP = CoordAxis::YP;
 
 mat4 Camera::getView() {
-//    this->update();
-//    return this->view;
     glm::vec3 eye   = this->pos;
-
-//    this->right = glm::normalize(glm::cross(VERTICAL_UP, this->focal));
-//    this->up = glm::cross(this->focal, right);
     return {
             glm::vec4(this->right.x, this->up.x, this->focal.x, 0),
             glm::vec4(this->right.y, this->up.y, this->focal.y, 0),
@@ -32,7 +27,7 @@ void Camera::update() {
     this->up = glm::cross(this->focal, right);
 }
 
-Camera::Camera(const vec3 &pos, const vec3& focal): pos(pos), focal(focal) {
+Camera::Camera(const vec3 &pos, const vec3& focal, float zNear, float zFar): pos(pos), focal(focal), zNear(zNear), zFar(zFar) {
     this->update();
 }
 
@@ -60,9 +55,17 @@ const glm::vec3& Camera::getFocal() const {
     return this->focal;
 }
 
-Camera::Camera(const std::tuple<glm::vec3, glm::vec3, glm::vec3> &info): pos(glm::vec3(0)) {
+Camera::Camera(const std::tuple<glm::vec3, glm::vec3, glm::vec3> &info, float zNear, float zFar): pos(glm::vec3(0)), zNear(zNear), zFar(zFar) {
     this->focal = get<0>(info);
     this->right = get<1>(info);
     this->up    = get<2>(info);
+}
+
+GLfloat Camera::near() const {
+    return zNear;
+}
+
+GLfloat Camera::far() const {
+    return zFar;
 }
 

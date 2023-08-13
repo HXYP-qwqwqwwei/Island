@@ -1,6 +1,6 @@
 #version 460 core
 in vec2 fTexUV;
-in mat4 view_inv;
+in mat3 view_inv3x3;
 in vec3 dLightInj_viewSpace;
 
 uniform sampler2D texture0; // pos & depth
@@ -12,23 +12,28 @@ uniform sampler2D texture4; // ssao
 layout (location = 0) out vec4 fragColor;
 layout (location = 1) out vec4 brightColor;
 
+#define MAX_CSM_LEVELS 4
+
 struct DirectLight {
     vec3 injection;
     vec3 color;
     vec3 ambient;
-    sampler2D depthTex;
+    sampler2D csmMaps[MAX_CSM_LEVELS];
+    mat4 LiSpaceMatrices[MAX_CSM_LEVELS];
+    float farDepths[MAX_CSM_LEVELS];
+    int csmLevels;
 };
 
 uniform DirectLight directLight;
 
-uniform mat4 lightSpaceMtx;
-
 float directLightShadow(sampler2D depthTex, vec4 fPosLSpace, vec3 injction, vec3 norm);
+int chooseCSMLevel(DirectLight light, float depth);
 
 
 void main() {
     float gamma = 2.2;
-    vec3 fPos    = texture(texture0, fTexUV).xyz;
+    vec4 PosDepth = texture(texture0, fTexUV);
+    vec3 fPos    = PosDepth.xyz;
     vec3 texNorm = texture(texture1, fTexUV).xyz;
 
     vec3 texDiff = texture(texture2, fTexUV).rgb;
@@ -37,7 +42,8 @@ void main() {
     vec3 texSpec = texture(texture3, fTexUV).rgb;
     float occlusion = texture(texture4, fTexUV).r;
 
-    float dShadow = directLightShadow(directLight.depthTex, lightSpaceMtx * view_inv * vec4(fPos, 1.0), directLight.injection, texNorm);
+    int i = chooseCSMLevel(directLight, PosDepth.w);
+    float dShadow = directLightShadow(directLight.csmMaps[i], directLight.LiSpaceMatrices[i] * vec4(fPos, 1.0), directLight.injection, texNorm);
 
     // Ambient
     vec3 ambient = directLight.ambient * texDiff * occlusion;
@@ -52,6 +58,7 @@ void main() {
     float shin          = max(7.82e-3, 2.0);     // 0.00782 * 128 ~= 1
     vec3 halfway_dLight = normalize(viewVec - inj_dLight);
     vec3 spec_dLight    = directLight.color * pow(max(dot(halfway_dLight, texNorm), 0.0), shin * 128);
+    spec_dLight *= (1.0 - dShadow);
 
     vec3 specular = spec_dLight * texSpec;
     vec3 diffuse  = diff_dLight * texDiff;
@@ -66,13 +73,21 @@ void main() {
 
 }
 
+int chooseCSMLevel(DirectLight light, float depth) {
+    int n = min(MAX_CSM_LEVELS, light.csmLevels);
+    for (int i = 0; i < n; ++i) {
+        if (depth < light.farDepths[i]) {
+            return i;
+        }
+    }
+    return n - 1;
+}
+
 
 float directLightShadow(sampler2D depthTex, vec4 fPosLSpace, vec3 injction, vec3 norm) {
     vec3 projCoords = fPosLSpace.xyz / fPosLSpace.w;
-    // 将坐标范围从[-1, 1]映射到[0, 1]
-    projCoords = (projCoords + 1.0) * 0.5;
     float currDepth = projCoords.z;
-    float bias = max(0.0001 * (1.0 - dot(mat3(view_inv) * norm, -normalize(injction))), 0.00001);
+    float bias = max(0.0001 * (1.0 - dot(view_inv3x3 * norm, -normalize(injction))), 0.00001);
     vec2 texSize = textureSize(depthTex, 0);
 
     float shadow = 0;
