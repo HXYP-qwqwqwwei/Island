@@ -133,9 +133,9 @@ bool Shader::compileShader(const std::string& source, GLObject& shaderObject, GL
 const Shader* selectShader(RenderType type) {
     switch (type) {
         case SOLID:
-            return SolidShader;
         case CUTOUT:
-            return CutoutShader;
+            return SolidShader;
+//            return CutoutShader;
         case TRANSPARENT:
             return TransparentShader;
         case SCREEN:

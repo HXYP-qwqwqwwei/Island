@@ -18,8 +18,9 @@
 using GLObject = GLuint;
 using GLLoc = GLint;
 
+#define ISLAND_PBR
 #define ISLAND_ENABLE_HDR
-#define ISLAND_ENABLE_DEFERRED_SHADING
+//#define ISLAND_ENABLE_DEFERRED_SHADING
 
 int main() {
     glfwInit();
@@ -157,11 +158,10 @@ int main() {
 
 #elif defined(ISLAND_ENABLE_HDR)
     FrameBuffer frameBuffer(GameScrWidth, GameScrHeight);
-    frameBuffer.texture(RGB_FLOAT, 2).depthBuffer().stencilBuffer().useRenderBuffer().build();
+    frameBuffer.texture(GL_RGB16F, 2).depthBuffer().stencilBuffer().useRenderBuffer().build();
 #else
-    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight, RGB_BYTE);
-    frameBuffer.enableMSAA(RGB_BYTE | DEPTH | STENCIL, 4);
-    Screen* screen = shapes::ScreenRect({frameBuffer.getTexture()});
+    FrameBuffer frameBuffer(GameScrWidth, GameScrHeight);
+    frameBuffer.texture(GL_RGB).depthBuffer().stencilBuffer().useRenderBuffer().build();
 #endif
 
 
@@ -327,8 +327,9 @@ int main() {
         ClearBuffer(GL_COLOR_BUFFER_BIT, 1.0, 1.0, 1.0);
         RenderFrame(frameBuffer, {0, 1});
 #else
-        ScreenShader->use();
-        screen->draw(*ScreenShader);
+        BindFrameBuffer(nullptr);
+        ClearBuffer(GL_COLOR_BUFFER_BIT, 1.0, 1.0, 1.0);
+        RenderFrame(frameBuffer, {0});
 #endif
         Flush();
         glfwSwapBuffers(window);

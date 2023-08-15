@@ -320,13 +320,13 @@ void PutCSMFrustums(Camera &camera, std::vector<CascadedShadowMap> &csmShadows) 
     // 视锥体分块
     GLfloat near = camera.near();
     GLfloat far = camera.far();
-    GLfloat fragFN = far / near;
+    GLfloat fracFN = far / near;
     GLfloat lambda = 0.6;
     GLfloat ni = near;
     GLfloat fi;
     for (GLsizei i = 1; i <= nSeg; ++i) {
         GLfloat si = GLfloat(i)/GLfloat(nSeg);
-        fi = lambda * near * pow(fragFN, si) + (1-lambda) * (near + (far-near) * si);
+        fi = lambda * near * pow(fracFN, si) + (1 - lambda) * (near + (far - near) * si);
         viewFrustums.emplace_back(ni, fi * 1.05f);
         ni = fi;
     }
