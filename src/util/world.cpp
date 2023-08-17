@@ -431,8 +431,9 @@ void UnbindAllTextures() {
 
 uint CreatePointLight(glm::vec3 pos, glm::vec3 color, GLsizei shadowRes, glm::vec3 attenu, glm::vec2 zNearFar) {
     uint id = PointLights.size();
-    auto* shadowBuffer = new FrameBufferCube(shadowRes, GL_NONE, true);
-    auto* p = new PointLight{color, pos, attenu, zNearFar, shadowBuffer->getDepthCubeMap()};
+    auto* shadowBuffer = new FrameBufferCube(shadowRes);
+    shadowBuffer->withDepth().build();
+    auto* p = new PointLight{color, pos, attenu, zNearFar, shadowBuffer->getDepthStencilTex()};
 
     PointShadowBuffers.push_back(shadowBuffer);
     PointLights.push_back(p);
@@ -462,7 +463,7 @@ void SetDirectLight(glm::vec3 injection, glm::vec3 color, GLsizei shadowRes, GLs
 
     for (GLsizei i = 0; i < csmLevels; ++i) {
         auto* shadowBuffer = new FrameBuffer(shadowRes, shadowRes);
-        shadowBuffer->depthBuffer().build();
+        shadowBuffer->withDepth().build();
         DirectLight.shadowMaps.emplace_back(shadowBuffer->getDepthStencilTex());
         CSMBuffers.push_back(shadowBuffer);
     }

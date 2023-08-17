@@ -29,11 +29,7 @@ void Mesh::drawInstanced(const Shader &shader, int amount) const {
 
 
 void Mesh::setupTextures(const Shader &shader) const {
-    int nDiff = 0;
-    int nSpec = 0;
-    int nNorm = 0;
-    int nRefl = 0;
-    int nPara = 0;
+    std::unordered_map<aiTextureType, GLint> nTex;
 
     shader.use();
     shader.setDefaultTexture(aiTextureType_DIFFUSE,      textures::MISSING.id,       DEFAULT_TEXTURE_DIFF);
@@ -41,6 +37,10 @@ void Mesh::setupTextures(const Shader &shader) const {
     shader.setDefaultTexture(aiTextureType_NORMALS,      textures::FLAT_NORMALS.id,  DEFAULT_TEXTURE_NORM);
     shader.setDefaultTexture(aiTextureType_REFLECTION,   textures::BLACK_RGB.id,     DEFAULT_TEXTURE_REFL);
     shader.setDefaultTexture(aiTextureType_DISPLACEMENT, textures::FLAT_PARALLAX.id, DEFAULT_TEXTURE_PARA);
+    shader.setDefaultTexture(aiTextureType_METALNESS,           textures::BLACK_GRAY.id,    DEFAULT_TEXTURE_METAL);
+    shader.setDefaultTexture(aiTextureType_DIFFUSE_ROUGHNESS,   textures::WHITE_GRAY.id,    DEFAULT_TEXTURE_ROUGH);
+    shader.setDefaultTexture(aiTextureType_AMBIENT_OCCLUSION,   textures::WHITE_GRAY.id,    DEFAULT_TEXTURE_AO);
+
 
     int i = 0;
     for (const auto& tex : textures) {
@@ -48,24 +48,7 @@ void Mesh::setupTextures(const Shader &shader) const {
         glBindTexture(GL_TEXTURE_2D, tex.id);
         std::string name(Shader::TEXTURES);
         name.reserve(24);
-        switch (tex.type) {
-            case aiTextureType_DIFFUSE:
-                name += Shader::TextureName(tex.type, nDiff++);
-                break;
-            case aiTextureType_SPECULAR:
-                name += Shader::TextureName(tex.type, nSpec++);
-                break;
-            case aiTextureType_NORMALS:
-                name += Shader::TextureName(tex.type, nNorm++);
-                break;
-            case aiTextureType_REFLECTION:
-                name += Shader::TextureName(tex.type, nRefl++);
-                break;
-            case aiTextureType_DISPLACEMENT:
-                name += Shader::TextureName(tex.type, nPara++);
-            default:
-                break;
-        }
+        name += Shader::TextureName(tex.type, nTex[tex.type]++);
         shader.uniformInt(name, i);
         i += 1;
     }

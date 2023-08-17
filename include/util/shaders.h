@@ -31,6 +31,7 @@ enum RenderType {
     SCREEN,
     SHADOW,
     PURE,
+    PBR_SOLID
 };
 
 
@@ -122,20 +123,29 @@ public:
 
 
 extern Shader* VoidShader;
+
+// forward shaders
 extern Shader* SolidShader;
 extern Shader* SimpleShader;
 extern Shader* TransparentShader;
 extern Shader* CutoutShader;
-extern Shader* ScreenShader;
-extern Shader* ScreenShaderHDR;
 extern Shader* SkyShader;
 extern Shader* DepthShader;
 extern Shader* DepthCubeShader;
+
+// screen shaders
+extern Shader* ScreenShader;
+extern Shader* ScreenShaderHDR;
+
+// deferred shaders
 extern Shader* GBufferShader;
 extern Shader* DeferredShader;
 extern Shader* DeferredPLightShader;
 extern Shader* DeferredPLNoShadowShader;
 extern Shader* SSAOShader;
+
+// PBR shaders
+extern Shader* PBRShader;
 
 
 extern Shader* GaussianBlurShader;

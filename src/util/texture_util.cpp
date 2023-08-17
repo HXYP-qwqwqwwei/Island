@@ -18,7 +18,7 @@ TextureCube textures::NO_POINT_SHADOW;
 
 
 void textures::loadDefaultTextures(const std::string& dir) {
-    MISSING = load_texture("missing.png", dir, GL_CLAMP_TO_EDGE, GL_NEAREST);
+    MISSING = load_texture("missing.png", dir, GL_REPEAT, GL_NEAREST);
     BLACK_RGB = load_texture("pure_black.png", dir);
     WHITE_RGB = load_texture("pure_white.png", dir);
     BLACK_GRAY = load_texture("pure_black_gray.png", dir);
@@ -46,14 +46,16 @@ Texture2D load_texture(const char* path, const std::string& directory, GLint war
     int width, height, nrChannels;
     std::string fullPath = directory + '/' + path;
     stbi_set_flip_vertically_on_load(flipUV);
-    unsigned char* data = stbi_load(fullPath.c_str(), &width, &height, &nrChannels, 0);
+    void* data = stbi_load(fullPath.c_str(), &width, &height, &nrChannels, 0);
     if (data == nullptr) {
-        std::cerr << "ERROR::TEXTURE::Failed to load texture at \"" << fullPath << "\"\n";
+        std::cerr << "ERROR::TEXTURE::Failed to load texture \"" << fullPath << "\"\n";
         return {};
     }
     GLint format = tex_format(nrChannels);
     if (format == -1) {
         stbi_image_free(data);
+        std::cerr << "ERROR::TEXTURE::Unsupported file format.\n";
+        std::cerr << "    Failed to load HDR texture \"" << fullPath << "\"\n";
         return {};
     }
     auto tex = createTexture2D(format, format, GL_UNSIGNED_BYTE, width, height, data, warp, filter, true);
@@ -61,6 +63,30 @@ Texture2D load_texture(const char* path, const std::string& directory, GLint war
     stbi_image_free(data);
     return tex;
 }
+
+
+Texture2D load_texture_HDR(const char *path, const std::string &directory, GLint warp, GLint filter, bool flipUV) {
+    int width, height, nrChannels;
+    std::string fullPath = directory + '/' + path;
+    stbi_set_flip_vertically_on_load(flipUV);
+    void* data = stbi_loadf(fullPath.c_str(), &width, &height, &nrChannels, 0);
+    if (data == nullptr) {
+        std::cerr << "ERROR::TEXTURE::Failed to load HDR texture \"" << fullPath << "\"\n";
+        return {};
+    }
+    GLint format = tex_format(nrChannels);
+    GLint internalFormat = tex_format_f(nrChannels);
+    if (format == -1) {
+        stbi_image_free(data);
+        std::cerr << "ERROR::TEXTURE::Unsupported file format.\n";
+        std::cerr << "    Failed to load HDR texture \"" << fullPath << "\"\n";
+        return {};
+    }
+    auto tex = createTexture2D(format, internalFormat, GL_FLOAT, width, height, data, warp, filter, true);
+    stbi_image_free(data);
+    return tex;
+}
+
 
 Texture2D createTexture2D(GLint format, GLint internalFormat, GLenum type, int width, int height, const void *data, GLint warp,
                        GLint filter, bool genMipmap) {
@@ -143,7 +169,21 @@ GLint tex_format(int nrChannels) {
         case 4:
             return GL_RGBA;
         default:
-            std::cerr << "ERROR::TEXTURE::Unsupported file format\n";
+            return -1;
+    }
+}
+
+GLint tex_format_f(int nrChannels) {
+    switch (nrChannels) {
+        case 1:
+            return GL_R16F;
+        case 2:
+            return GL_RG16F;
+        case 3:
+            return GL_RGB16F;
+        case 4:
+            return GL_RGBA16F;
+        default:
             return -1;
     }
 }

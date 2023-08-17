@@ -12,7 +12,7 @@
 #include "glm/glm.hpp"
 #include "assimp/material.h"
 #include "util/shaders.h"
-#include "util/stb_image.h"
+#include "stb_image.h"
 #include "util/texture_util.h"
 
 template<class Vert, class Tex>

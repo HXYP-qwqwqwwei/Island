@@ -8,7 +8,7 @@
 #include <vector>
 #include <string>
 #include <tuple>
-#include "util/stb_image.h"
+#include "stb_image.h"
 #include "util/Camera.h"
 #include "assimp/material.h"
 #include "glm/glm.hpp"
@@ -67,8 +67,12 @@ namespace textures {
 
 Texture2D createTexture2D(GLint format, GLint internalFormat, GLenum type, int width, int height, const void *data, GLint warp,
                        GLint filter, bool genMipmap);
+
+
 GLint tex_format(int nrChannels);
+GLint tex_format_f(int nrChannels);
 Texture2D load_texture(const char* path, const std::string& directory, GLint warp = GL_REPEAT, GLint filter = GL_LINEAR, bool flipUV = true);
+Texture2D load_texture_HDR(const char* path, const std::string& directory, GLint warp = GL_REPEAT, GLint filter = GL_LINEAR, bool flipUV = true);
 TextureCube load_cube_map(std::initializer_list<std::string> paths, const std::string& directory, bool flipUV = false);
 Texture2DWithType load_texture(const char* path, const std::string& directory, aiTextureType type, GLint warp = GL_REPEAT, GLint filter = GL_LINEAR, bool flipUV = true);
 

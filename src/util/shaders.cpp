@@ -7,20 +7,29 @@
 
 
 Shader* VoidShader;
+
+// forward shaders
 Shader* SolidShader;
 Shader* SimpleShader;
 Shader* TransparentShader;
 Shader* CutoutShader;
-Shader* ScreenShader;
-Shader* ScreenShaderHDR;
 Shader* SkyShader;
 Shader* DepthShader;
 Shader* DepthCubeShader;
+
+// screen shaders
+Shader* ScreenShader;
+Shader* ScreenShaderHDR;
+
+// deferred shaders
 Shader* GBufferShader;
 Shader* DeferredShader;
 Shader* DeferredPLightShader;
 Shader* DeferredPLNoShadowShader;
 Shader* SSAOShader;
+
+// PBR shaders
+Shader* PBRShader;
 
 
 Shader* GaussianBlurShader;
@@ -88,6 +97,11 @@ void compileShaders() {
     SSAOShader->loadShader("SSAOShader.frag", GL_FRAGMENT_SHADER);
     SSAOShader->link();
 
+    PBRShader = new Shader();
+    PBRShader->loadShader("CompletedShader.vert", GL_VERTEX_SHADER);
+    PBRShader->loadShader("PBRShader.frag", GL_FRAGMENT_SHADER);
+    PBRShader->link();
+
 
     SkyShader = new Shader();
     SkyShader->loadShader("SkyShader.vert", GL_VERTEX_SHADER);
@@ -144,6 +158,8 @@ const Shader* selectShader(RenderType type) {
             return DepthShader;
         case PURE:
             return SimpleShader;
+        case PBR_SOLID:
+            return PBRShader;
     }
 }
 
@@ -161,6 +177,8 @@ const Shader* selectCubeShader(RenderType type) {
             return DepthCubeShader;
         case PURE:
             return SimpleShader;
+        case PBR_SOLID:
+            return PBRShader;
     }
 
 }
@@ -187,6 +205,15 @@ std::string Shader::TextureName(int type, int n) {
             break;
         case aiTextureType_DISPLACEMENT:
             name = "parallax";
+            break;
+        case aiTextureType_DIFFUSE_ROUGHNESS:
+            name = "roughness";
+            break;
+        case aiTextureType_METALNESS:
+            name = "metalness";
+            break;
+        case aiTextureType_AMBIENT_OCCLUSION:
+            name = "ao";
             break;
         default:
             std::cerr << "WARN::TEXTURE::Unsupported texture type:" << type << '\n';

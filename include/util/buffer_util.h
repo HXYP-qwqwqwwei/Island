@@ -9,6 +9,7 @@
 #include "glad/glad.h"
 #include "defs.h"
 #include "texture_util.h"
+#include "Builder.h"
 
 
 class Buffer {
@@ -32,12 +33,11 @@ class FrameBuffer;
 
 void swapTexture(FrameBuffer* f1, FrameBuffer* f2, int i1 = 0, int i2 = 0);
 
-class FrameBuffer {
+class FrameBuffer: public Builder{
 private:
     std::vector<Texture2D> colors;
     GLuint object        = 0;
     GLuint depth_stencil = 0;
-    bool built      = false;
     bool depth      = false;
     bool stencil    = false;
     bool useRBO     = false;
@@ -49,33 +49,40 @@ public:
     FrameBuffer(GLsizei width, GLsizei height);
     ~FrameBuffer();
 
-    FrameBuffer& texture(int mode, int n = 1, GLint warp = GL_CLAMP_TO_EDGE, GLint filter = GL_LINEAR);
-    FrameBuffer& depthBuffer();
-    FrameBuffer& stencilBuffer();
+    FrameBuffer& texture(GLint internalFormat, GLsizei n = 1, GLint warp = GL_CLAMP_TO_EDGE, GLint filter = GL_LINEAR);
+    FrameBuffer& withDepth();
+    FrameBuffer& withStencil();
     FrameBuffer& useRenderBuffer();
-    void build();
+    void build() override;
 
     void bind() const;
     void unbind() const;
     void blitDepth(const FrameBuffer& input, GLenum bits) const;
-    [[nodiscard]] bool checkBuilt() const;
     [[nodiscard]] Texture2D getDepthStencilTex() const;
     [[nodiscard]] Texture2D getTexture(int i = 0) const;
 };
 
 
-class FrameBufferCube {
+class FrameBufferCube: Builder {
+private:
+    TextureCube* color  = nullptr;
+    GLuint object       = 0;
+    GLuint depthCube    = 0;
+    bool built = false;
+    bool depth = false;
+
 public:
-    FrameBufferCube(GLsizei length, GLint colorFormat, bool depth);
-    [[nodiscard]] TextureCube getDepthCubeMap() const;
-    [[nodiscard]] TextureCube getTextureCubeTex() const;
+    explicit FrameBufferCube(GLsizei length);
+    FrameBufferCube& texture(GLint internalFormat, GLint warp = GL_CLAMP_TO_EDGE, GLint filter = GL_LINEAR);
+    FrameBufferCube& withDepth();
+    void build() override;
+
+    [[nodiscard]] TextureCube getDepthStencilTex() const;
+    [[nodiscard]] TextureCube getTexture() const;
+
     void bind() const;
     const GLsizei length;
-    const GLint colorFormat;
-private:
-    GLuint object{};
-    GLuint colorCube{};
-    GLuint depthCube{};
+    [[deprecated]]FrameBufferCube& withStencil();
 };
 
 

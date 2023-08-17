@@ -63,6 +63,6 @@ void main() {
     vec3 B = cross(N, T);
 
     TBN = mat3(T, B, N);
-    mat3 TBN_inverse    = transpose(mat3(TBN)); // ViewSpace -> TanSpace
+    mat3 TBN_inverse    = transpose(TBN); // ViewSpace -> TanSpace
     viewVec_tanSpace    = TBN_inverse * (-fPos);
 }

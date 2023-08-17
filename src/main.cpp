@@ -1,12 +1,12 @@
 #include <iostream>
 #include <random>
+#include "stb_image.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 #include "util/shaders.h"
-#include "util/stb_image.h"
 #include "util/game_util.h"
 #include "util/shapes.h"
 #include "util/Model.h"
@@ -20,7 +20,8 @@ using GLLoc = GLint;
 
 #define ISLAND_PBR
 #define ISLAND_ENABLE_HDR
-//#define ISLAND_ENABLE_DEFERRED_SHADING
+#define ISLAND_ENABLE_DEFERRED_SHADING
+#undef ISLAND_ENABLE_DEFERRED_SHADING
 
 int main() {
     glfwInit();
@@ -75,10 +76,17 @@ int main() {
     Texture2DWithType grassDiff = load_texture("grass.png", dir, aiTextureType_DIFFUSE, GL_CLAMP_TO_EDGE);
     Texture2DWithType windowTexDiff = load_texture("window_transparent.png", dir, aiTextureType_DIFFUSE);
 
+    Texture2DWithType rustyIronDiff = load_texture("rustediron2_basecolor.png", dir, aiTextureType_DIFFUSE);
+    Texture2DWithType rustyIronMetal = load_texture("rustediron2_metallic.png", dir, aiTextureType_METALNESS);
+    Texture2DWithType rustyIronNorm = load_texture("rustediron2_normal.png", dir, aiTextureType_NORMALS);
+    Texture2DWithType rustyIronRough = load_texture("rustediron2_roughness.png", dir, aiTextureType_DIFFUSE_ROUGHNESS);
+
     TextureCube skyBoxTex = load_cube_map(
             {"skybox/right.jpg", "skybox/left.jpg", "skybox/top.jpg", "skybox/bottom.jpg", "skybox/front.jpg", "skybox/back.jpg"},
             dir
     );
+
+    Texture2D loftEnv = load_texture_HDR("newport_loft.hdr", dir);
 
     // Models
     Model nanoSuitModel("resources/nanosuit/nanosuit.obj");
@@ -92,19 +100,30 @@ int main() {
             return shapes::Cube(1, {toyBoxDiff, toyBoxNorm, toyBoxPara, toyBoxSpec});
         };
 
+        auto ball           = [=]() -> Model {
+            return shapes::Ball(0.5f, 600, 300, {
+                    rustyIronDiff,
+                    rustyIronMetal,
+                    rustyIronNorm,
+                    rustyIronRough
+            });
+        };
+
         MODEL_MANAGER.put(cube, "cube");
         MODEL_MANAGER.put(woodenFloor, "wooden_floor");
         MODEL_MANAGER.put(lightCube, "light_cube");
         MODEL_MANAGER.put(rgbWindow, "rgb_window");
         MODEL_MANAGER.put(grass, "grass");
         MODEL_MANAGER.put(toyBox, "toy_box");
+        MODEL_MANAGER.put(ball, "ball");
     }
 
     // Sky box
     SkyBox* skyBox  = shapes::SkyBoxCube(skyBoxTex);
+    TextureCube& envMap = textures::EMPTY_ENV_MAP;
 
     /**================ Tools ================**/
-    std::mt19937 randGen(std::random_device{}());
+    [[maybe_unused]] std::mt19937 randGen(std::random_device{}());
     std::uniform_real_distribution<float> u01(0, 1.0);
 
 
@@ -115,11 +134,11 @@ int main() {
     gBuffer.texture(GL_RGBA16F)     // position & depth
             .texture(GL_RGB16F)      // specular
             .texture(GL_RGB, 2)   // diffuse & specular
-            .depthBuffer().useRenderBuffer()
+            .withDepth().useRenderBuffer()
             .build();
 
     FrameBuffer frameBuffer(GameScrWidth, GameScrHeight);
-    frameBuffer.texture(GL_RGB16F, 2).depthBuffer().stencilBuffer().build();
+    frameBuffer.texture(GL_RGB16F, 2).withDepth().withStencil().build();
 
     // ssao
     FrameBuffer ssaoFrame(GameScrWidth, GameScrHeight);
@@ -154,11 +173,9 @@ int main() {
 
     Texture2D ssaoNoiseTex = createTexture2D(GL_RGB, GL_RGB16F, GL_FLOAT, noiseSize, noiseSize, &ssaoNoises[0], GL_REPEAT, GL_NEAREST, false);
 
-
-
 #elif defined(ISLAND_ENABLE_HDR)
     FrameBuffer frameBuffer(GameScrWidth, GameScrHeight);
-    frameBuffer.texture(GL_RGB16F, 2).depthBuffer().stencilBuffer().useRenderBuffer().build();
+    frameBuffer.texture(GL_RGB16F, 2).withDepth().withStencil().useRenderBuffer().build();
 #else
     FrameBuffer frameBuffer(GameScrWidth, GameScrHeight);
     frameBuffer.texture(GL_RGB).depthBuffer().stencilBuffer().useRenderBuffer().build();
@@ -169,21 +186,22 @@ int main() {
     double T0 = t0;
     int nFrames = 0;
     Camera camera(initPos);
-    TextureCube& envMap = textures::EMPTY_ENV_MAP;
 
     /**================ World and Lights ================**/
     InitWorld();
-    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(0.0f), 1024, 4, glm::vec3(.1));
+    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(1.0f), 1024, 4, glm::vec3(.01));
     CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(10.0f), 512);
     CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0), 512);
     CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 512);
     CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 512);
 
+#ifdef ISLAND_ENABLE_DEFERRED_SHADING
 //    CreatePointLightNoShadow(glm::vec3(-3, 1, -3), glm::vec3(10.0f));
 //    CreatePointLightNoShadow(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0));
 //    CreatePointLightNoShadow(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0));
 //    CreatePointLightNoShadow(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f));
-
+//
+//
 //    for (int i = -10; i <= 10; ++i) {
 //        for (int j = -10; j <= 10; ++j) {
 //            float r = u01(randGen) * 20;
@@ -192,6 +210,7 @@ int main() {
 //            CreatePointLightNoShadow(glm::vec3(i*3, 1, j*3), glm::vec3(r, g, b));
 //        }
 //    }
+#endif
 
 
     /**================ Render Loop ================**/
@@ -230,6 +249,11 @@ int main() {
         ModelInfo toyBoxes = MODEL_MANAGER.createInfo("toy_box");
         toyBoxes.addInstance(glm::translate(modelMtx, glm::vec3(-2, 0, -4)));
         PutModelInfo(SOLID, &toyBoxes);
+
+        ModelInfo ball = MODEL_MANAGER.createInfo("ball");
+        ball.addInstance(glm::translate(modelMtx, glm::vec3(0, 2, 0)));
+        PutModelInfo(PBR_SOLID, &ball);
+
 
         const int range = 8;
         const int amount = (2 * range + 1) * (2 * range + 1);
@@ -294,6 +318,7 @@ int main() {
         ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         EnableDepthTest();
         RenderModelsInWorld(camera, SOLID);
+        RenderModelsInWorld(camera, PBR_SOLID);
         RenderModelsInWorld(camera, CUTOUT);
         RenderModelsInWorld(camera, PURE);
 #endif
