@@ -8,6 +8,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include "defs.h"
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 #include "glm/glm.hpp"
@@ -130,6 +131,8 @@ extern Shader* SimpleShader;
 extern Shader* TransparentShader;
 extern Shader* CutoutShader;
 extern Shader* SkyShader;
+extern Shader* SkyShaderHDR;
+extern Shader* SkyShaderEquirectangular;
 extern Shader* DepthShader;
 extern Shader* DepthCubeShader;
 

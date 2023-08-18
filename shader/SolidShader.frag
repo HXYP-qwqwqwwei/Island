@@ -71,7 +71,7 @@ void main() {
     vec4 texRfle = texture(texes.reflect0,  fixedUV);
     vec3 texNorm = texture(texes.normals0,  fixedUV).rgb;
     texNorm = normalize(texNorm * 2.0 - 1.0);  // IMPORTANT!!! 需要把坐标从[0, 1]映射到[-1, +1]
-    texNorm = TBN * texNorm;
+    texNorm = TBN * texNorm;    // transform to view-space
 
 
     // ambient
@@ -123,8 +123,8 @@ void main() {
 
 
     // reflection
-    vec3 refl = reflect(-viewVec, texNorm);
-    vec3 reflection = texture(environment, TBN * refl).rgb * texRfle.rgb;
+    vec3 refl = transpose(mat3(view)) * reflect(-viewVec, texNorm); // back to world-space
+    vec3 reflection = texture(environment, refl).rgb * texRfle.rgb;
 
     fragColor = vec4(ambient + diffuse + specular + reflection, 1);
 

@@ -60,6 +60,7 @@ public:
     void blitDepth(const FrameBuffer& input, GLenum bits) const;
     [[nodiscard]] Texture2D getDepthStencilTex() const;
     [[nodiscard]] Texture2D getTexture(int i = 0) const;
+    [[nodiscard]] Texture2D extractTexture(int i = 0);
 };
 
 
@@ -72,6 +73,7 @@ private:
     bool depth = false;
 
 public:
+    const GLsizei length;
     explicit FrameBufferCube(GLsizei length);
     FrameBufferCube& texture(GLint internalFormat, GLint warp = GL_CLAMP_TO_EDGE, GLint filter = GL_LINEAR);
     FrameBufferCube& withDepth();
@@ -81,7 +83,7 @@ public:
     [[nodiscard]] TextureCube getTexture() const;
 
     void bind() const;
-    const GLsizei length;
+    void bind(GLenum target) const;
     [[deprecated]]FrameBufferCube& withStencil();
 };
 

@@ -23,6 +23,8 @@ typedef GLuint GLObject;
 #define DEFAULT_TEXTURE_METAL   25
 #define DEFAULT_TEXTURE_ROUGH   24
 
+#define ENVIRONMENT_MAP_TEX     15
+
 #define POINT_SHADOW_MAP0       16
 #define POINT_SHADOW_MAP1       17
 #define POINT_SHADOW_MAP2       18

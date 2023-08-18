@@ -28,8 +28,6 @@ public:
     virtual void draw(const Shader& shader) const = 0;
 //    void setEnvironmentMap(GLuint cubeTex);
 //    void setShadowMap(GLuint shadowTex);
-    void bind() const;
-    void unbind() const;
 
 protected:
     GLuint VAO = 0;
@@ -40,6 +38,8 @@ protected:
     std::vector<Vert> vertices;
     std::vector<Tex> textures;
     std::vector<uint> indices;
+    void bind() const;
+    void unbind() const;
     void setupMesh();
     virtual void setupVertexAttribs() = 0;
 };

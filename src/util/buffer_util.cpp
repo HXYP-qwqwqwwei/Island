@@ -230,10 +230,6 @@ TextureCube FrameBufferCube::getTexture() const {
     return *this->color;
 }
 
-void FrameBufferCube::bind() const {
-    glBindFramebuffer(GL_FRAMEBUFFER, this->object);
-}
-
 FrameBufferCube &FrameBufferCube::texture(GLint internalFormat, GLint warp, GLint filter) {
     if (this->color != nullptr) {
         std::cerr << "WARN::FrameBufferCube::texture: Cube buffer can only create one color attachment.\n";
@@ -296,6 +292,26 @@ void FrameBufferCube::build() {
     this->setBuilt();
 }
 
+void FrameBufferCube::bind() const {
+    glBindFramebuffer(GL_FRAMEBUFFER, this->object);
+    if (this->color != nullptr) {
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, this->color->id, 0);
+    } else {
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+    }
+}
+
+void FrameBufferCube::bind(GLenum target) const {
+    glBindFramebuffer(GL_FRAMEBUFFER, this->object);
+    if (this->color != nullptr) {
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target, this->color->id, 0);
+    } else {
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+    }
+}
+
 
 FrameBuffer::FrameBuffer(GLsizei width, GLsizei height): width(width), height(height), Builder("FrameBuffer") {}
 
@@ -327,7 +343,7 @@ FrameBuffer& FrameBuffer::texture(GLint internalFormat, GLsizei n, GLint warp, G
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
         glBindTexture(GL_TEXTURE_2D, 0);
 
-        this->colors.emplace_back(tex, width, height, internalFormat);
+        this->colors.emplace_back(tex, width, height, internalFormat, warp, filter);
     }
     return *this;
 }
@@ -430,6 +446,14 @@ Texture2D FrameBuffer::getTexture(int i) const {
     }
     return this->colors[i];
 }
+
+Texture2D FrameBuffer::extractTexture(int i) {
+    Texture2D extracted = this->colors[i];
+    this->colors[i] = createTexture2D(extracted.internalFormat, extracted.width, extracted.height, extracted.warp, extracted.filter);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, this->colors[i].id, 0);
+    return extracted;
+}
+
 
 void FrameBuffer::bind() const {
     this->checkNotBuilt("bind: Buffer has not built");

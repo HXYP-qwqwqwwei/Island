@@ -44,6 +44,8 @@ struct Texture2D {
     GLsizei width = 4;
     GLsizei height = 4;
     GLint internalFormat = GL_RGB;
+    GLint warp = GL_CLAMP_TO_EDGE;
+    GLint filter = GL_LINEAR;
 };
 
 struct Texture2DWithType: public Texture2D{
@@ -68,6 +70,7 @@ namespace textures {
 Texture2D createTexture2D(GLint format, GLint internalFormat, GLenum type, int width, int height, const void *data, GLint warp,
                        GLint filter, bool genMipmap);
 
+Texture2D createTexture2D(GLint internalFormat, int width, int height, GLint warp, GLint filter);
 
 GLint tex_format(int nrChannels);
 GLint tex_format_f(int nrChannels);

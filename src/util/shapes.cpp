@@ -142,50 +142,57 @@ Screen* shapes::ScreenRect(TexList<Texture2D> tex) {
     return rect;
 }
 
+std::vector<glm::vec3 > SKY_BOX_VERTICES {
+        glm::vec3(  .5f,    .5f,    .5f),
+        glm::vec3(  .5f,   -.5f,    .5f),
+        glm::vec3( -.5f,   -.5f,    .5f),
+        glm::vec3( -.5f,    .5f,    .5f),
+
+        glm::vec3(  .5f,    .5f,   -.5f),
+        glm::vec3( -.5f,    .5f,   -.5f),
+        glm::vec3( -.5f,   -.5f,   -.5f),
+        glm::vec3(  .5f,   -.5f,   -.5f),
+
+        glm::vec3(  .5f,    .5f,    .5f),
+        glm::vec3( -.5f,    .5f,    .5f),
+        glm::vec3( -.5f,    .5f,   -.5f),
+        glm::vec3(  .5f,    .5f,   -.5f),
+
+        glm::vec3(  .5f,   -.5f,    .5f),
+        glm::vec3(  .5f,   -.5f,   -.5f),
+        glm::vec3( -.5f,   -.5f,   -.5f),
+        glm::vec3( -.5f,   -.5f,    .5f),
+
+        glm::vec3(  .5f,    .5f,    .5f),
+        glm::vec3(  .5f,    .5f,   -.5f),
+        glm::vec3(  .5f,   -.5f,   -.5f),
+        glm::vec3(  .5f,   -.5f,    .5f),
+
+        glm::vec3( -.5f,    .5f,    .5f),
+        glm::vec3( -.5f,   -.5f,    .5f),
+        glm::vec3( -.5f,   -.5f,   -.5f),
+        glm::vec3( -.5f,    .5f,   -.5f),
+};
+
+std::vector<uint> SKY_BOX_INDICES {
+        0,  1,  2,  0,  2,  3,
+        4,  5,  6,  4,  6,  7,
+        8,  9,  10, 8,  10, 11,
+        12, 13, 14, 12, 14, 15,
+        16, 17, 18, 16, 18, 19,
+        20, 21, 22, 20, 22, 23
+};
+
+
 SkyBox* shapes::SkyBoxCube(TextureCube texture) {
-    std::vector<VertexCube> vertices {
-            {glm::vec3(  .5f,    .5f,    .5f)},
-            {glm::vec3(  .5f,   -.5f,    .5f)},
-            {glm::vec3( -.5f,   -.5f,    .5f)},
-            {glm::vec3( -.5f,    .5f,    .5f)},
-
-            {glm::vec3(  .5f,    .5f,   -.5f)},
-            {glm::vec3( -.5f,    .5f,   -.5f)},
-            {glm::vec3( -.5f,   -.5f,   -.5f)},
-            {glm::vec3(  .5f,   -.5f,   -.5f)},
-
-            {glm::vec3(  .5f,    .5f,    .5f)},
-            {glm::vec3( -.5f,    .5f,    .5f)},
-            {glm::vec3( -.5f,    .5f,   -.5f)},
-            {glm::vec3(  .5f,    .5f,   -.5f)},
-
-            {glm::vec3(  .5f,   -.5f,    .5f)},
-            {glm::vec3(  .5f,   -.5f,   -.5f)},
-            {glm::vec3( -.5f,   -.5f,   -.5f)},
-            {glm::vec3( -.5f,   -.5f,    .5f)},
-
-            {glm::vec3(  .5f,    .5f,    .5f)},
-            {glm::vec3(  .5f,    .5f,   -.5f)},
-            {glm::vec3(  .5f,   -.5f,   -.5f)},
-            {glm::vec3(  .5f,   -.5f,    .5f)},
-
-            {glm::vec3( -.5f,    .5f,    .5f)},
-            {glm::vec3( -.5f,   -.5f,    .5f)},
-            {glm::vec3( -.5f,   -.5f,   -.5f)},
-            {glm::vec3( -.5f,    .5f,   -.5f)},
-    };
-
-    std::vector<uint> indices {
-            0,  1,  2,  0,  2,  3,
-            4,  5,  6,  4,  6,  7,
-            8,  9,  10, 8,  10, 11,
-            12, 13, 14, 12, 14, 15,
-            16, 17, 18, 16, 18, 19,
-            20, 21, 22, 20, 22, 23
-    };
-
     std::vector<TextureCube> textures = {texture};
-    return new SkyBox(vertices, indices, textures);
+    return new SkyBox(SKY_BOX_VERTICES, SKY_BOX_INDICES, textures);
 }
+
+SkyBoxEquirectangular* shapes::SkyBoxCubeEquirectangular(Texture2D texture) {
+    std::vector<Texture2D> textures = {texture};
+    return new SkyBoxEquirectangular(SKY_BOX_VERTICES, SKY_BOX_INDICES, textures);
+}
+
 
 

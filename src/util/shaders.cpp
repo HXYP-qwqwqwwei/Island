@@ -14,6 +14,8 @@ Shader* SimpleShader;
 Shader* TransparentShader;
 Shader* CutoutShader;
 Shader* SkyShader;
+Shader* SkyShaderHDR;
+Shader* SkyShaderEquirectangular;
 Shader* DepthShader;
 Shader* DepthCubeShader;
 
@@ -107,6 +109,16 @@ void compileShaders() {
     SkyShader->loadShader("SkyShader.vert", GL_VERTEX_SHADER);
     SkyShader->loadShader("SkyShader.frag", GL_FRAGMENT_SHADER);
     SkyShader->link();
+
+    SkyShaderHDR = new Shader();
+    SkyShaderHDR->loadShader("SkyShader.vert", GL_VERTEX_SHADER);
+    SkyShaderHDR->loadShader("SkyShaderHDR.frag", GL_FRAGMENT_SHADER);
+    SkyShaderHDR->link();
+
+    SkyShaderEquirectangular = new Shader();
+    SkyShaderEquirectangular->loadShader("SkyShader.vert", GL_VERTEX_SHADER);
+    SkyShaderEquirectangular->loadShader("SkyShaderEquirectangular.frag", GL_FRAGMENT_SHADER);
+    SkyShaderEquirectangular->link();
 
     DepthShader = new Shader();
     DepthShader->loadShader("DepthShader.vert", GL_VERTEX_SHADER);
@@ -298,7 +310,7 @@ void Shader::setDefaultTexture(aiTextureType type, GLuint tex, int idx) const {
 }
 
 void Shader::setEnvironmentMap(GLuint envMap) const {
-    glActiveTexture(GL_TEXTURE29);
+    glActiveTexture(GL_TEXTURE0 + ENVIRONMENT_MAP_TEX);
     glBindTexture(GL_TEXTURE_CUBE_MAP, envMap);
-    this->uniformInt(Shader::ENVIRONMENT_MAP, 29);
+    this->uniformInt(Shader::ENVIRONMENT_MAP, ENVIRONMENT_MAP_TEX);
 }

@@ -81,12 +81,12 @@ int main() {
     Texture2DWithType rustyIronNorm = load_texture("rustediron2_normal.png", dir, aiTextureType_NORMALS);
     Texture2DWithType rustyIronRough = load_texture("rustediron2_roughness.png", dir, aiTextureType_DIFFUSE_ROUGHNESS);
 
-    TextureCube skyBoxTex = load_cube_map(
-            {"skybox/right.jpg", "skybox/left.jpg", "skybox/top.jpg", "skybox/bottom.jpg", "skybox/front.jpg", "skybox/back.jpg"},
+    [[maybe_unused]] TextureCube landscape = load_cube_map(
+            {"landscape/right.jpg", "landscape/left.jpg", "landscape/top.jpg", "landscape/bottom.jpg", "landscape/front.jpg", "landscape/back.jpg"},
             dir
     );
 
-    Texture2D loftEnv = load_texture_HDR("newport_loft.hdr", dir);
+    Texture2D loftEquirectangularTex = load_texture_HDR("newport_loft.hdr", dir);
 
     // Models
     Model nanoSuitModel("resources/nanosuit/nanosuit.obj");
@@ -118,9 +118,6 @@ int main() {
         MODEL_MANAGER.put(ball, "ball");
     }
 
-    // Sky box
-    SkyBox* skyBox  = shapes::SkyBoxCube(skyBoxTex);
-    TextureCube& envMap = textures::EMPTY_ENV_MAP;
 
     /**================ Tools ================**/
     [[maybe_unused]] std::mt19937 randGen(std::random_device{}());
@@ -195,6 +192,24 @@ int main() {
     CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 512);
     CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 512);
 
+    // HDR environment cube map from equirectangular texture
+    FrameBufferCube hdrCubeEnvBuffer(loftEquirectangularTex.height);
+    hdrCubeEnvBuffer.texture(GL_RGB16F).build();
+    glm::mat4 envProj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 1.0f);
+    std::vector<glm::mat4> envViews;
+    envViews.push_back(glm::lookAt(glm::vec3(0), glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+    envViews.push_back(glm::lookAt(glm::vec3(0), glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+    envViews.push_back(glm::lookAt(glm::vec3(0), glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
+    envViews.push_back(glm::lookAt(glm::vec3(0), glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
+    envViews.push_back(glm::lookAt(glm::vec3(0), glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
+    envViews.push_back(glm::lookAt(glm::vec3(0), glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
+    for (size_t i = 0; i < 6; ++i) {
+        BindFrameBuffer(&hdrCubeEnvBuffer, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i);
+        SetupPVMatrix(envProj, envViews[i]);
+        RenderSkyBoxEquirectangular(loftEquirectangularTex);
+    }
+    TextureCube loftCubeTex = hdrCubeEnvBuffer.getTexture();
+
 #ifdef ISLAND_ENABLE_DEFERRED_SHADING
 //    CreatePointLightNoShadow(glm::vec3(-3, 1, -3), glm::vec3(10.0f));
 //    CreatePointLightNoShadow(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0));
@@ -255,6 +270,7 @@ int main() {
         PutModelInfo(PBR_SOLID, &ball);
 
 
+/*
         const int range = 8;
         const int amount = (2 * range + 1) * (2 * range + 1);
         std::vector<glm::mat4> floorMats;
@@ -275,6 +291,7 @@ int main() {
         ModelInfo floors = MODEL_MANAGER.createInfo("wooden_floor");
         floors.addInstance(floorMats);
         PutModelInfo(SOLID, &floors);
+*/
 
 
         ModelInfo grasses = MODEL_MANAGER.createInfo("grass");
@@ -313,34 +330,32 @@ int main() {
         ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         RenderWorldGBuffer(camera, SOLID);
         RenderWorldGBuffer(camera, CUTOUT);
-#else
-        BindFrameBuffer(&frameBuffer);
-        ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        EnableDepthTest();
-        RenderModelsInWorld(camera, SOLID);
-        RenderModelsInWorld(camera, PBR_SOLID);
-        RenderModelsInWorld(camera, CUTOUT);
-        RenderModelsInWorld(camera, PURE);
-#endif
 
-        /*================ sky box ================*/
-/*
-        SkyShader.use();
-        SkyShader.uniformMatrix4fv(Shader::PROJECTION, proj);
-        SkyShader.uniformMatrix4fv("view", glm::mat4(glm::mat3(view)));
-        skyBox->draw(SkyShader);
-*/
-
-#ifdef ISLAND_ENABLE_DEFERRED_SHADING
+        // SSAO
         BindFrameBuffer(&ssaoFrame);
         RenderSSAO(gBuffer, &ssaoSamples[0], ssaoSamples.size(), ssaoNoiseTex);
         Blur(0, 1);
 
+        // Light models
         BindFrameBuffer(&frameBuffer);
         ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         ProcessGBuffer(gBuffer, ssaoFrame.getTexture());
         RenderModelsInWorld(camera, PURE);
+
+#else
+        BindFrameBuffer(&frameBuffer);
+        ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        EnableDepthTest();
+
+        SetupEnvironmentMap(&loftCubeTex);
+        RenderModelsInWorld(camera, SOLID);
+        RenderModelsInWorld(camera, PBR_SOLID);
+        RenderModelsInWorld(camera, CUTOUT);
+        RenderModelsInWorld(camera, PURE);
+
+        RenderSkyBoxCube(loftCubeTex, true);
 #endif
+
 
         /*================ Post-Production ================*/
 #ifdef ISLAND_ENABLE_HDR

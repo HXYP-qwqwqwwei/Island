@@ -105,6 +105,10 @@ Texture2D createTexture2D(GLint format, GLint internalFormat, GLenum type, int w
     return {id, width, height, internalFormat};
 }
 
+Texture2D createTexture2D(GLint internalFormat, int width, int height, GLint warp, GLint filter) {
+    return createTexture2D(GL_RGB, internalFormat, GL_UNSIGNED_BYTE, width, height, nullptr, warp, filter, false);
+}
+
 
 TextureCube load_cube_map(std::initializer_list<std::string> paths, const std::string& directory, bool flipUV) {
     GLuint id;
