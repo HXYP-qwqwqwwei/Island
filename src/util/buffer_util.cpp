@@ -223,31 +223,30 @@ TextureCube FrameBufferCube::getDepthStencilTex() const {
 }
 
 TextureCube FrameBufferCube::getTexture() const {
-    if (this->color == nullptr) {
+    if (this->color.id == 0) {
         std::cerr << "WARN::FrameBufferCube::getTexture: buffer has no color attachment.\n";
-        return {};
     }
-    return *this->color;
+    return this->color;
 }
 
+TextureCube FrameBufferCube::extractTexture() {
+    TextureCube extracted = this->color;
+    if (extracted.id == 0) {
+        std::cerr << "WARN::FrameBufferCube::texture: Cube has no color attachment.\n";
+        return extracted;
+    }
+    this->color = createTextureCube(extracted.internalFormat, extracted.length, extracted.warp, extracted.filter);
+    return extracted;
+}
+
+
 FrameBufferCube &FrameBufferCube::texture(GLint internalFormat, GLint warp, GLint filter) {
-    if (this->color != nullptr) {
+    if (checkBuilt("texture: Buffer is already built.")) return *this;
+    if (this->color.id != 0) {
         std::cerr << "WARN::FrameBufferCube::texture: Cube buffer can only create one color attachment.\n";
         return *this;
     }
-    auto* tex = new TextureCube;
-    glGenTextures(1, &tex->id);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, tex->id);
-    for (int i = 0; i < 6; ++i) {
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat, length, length, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-    }
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, warp);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, warp);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, warp);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, filter);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, filter);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-    this->color = tex;
+    this->color = createTextureCube(internalFormat, this->length, warp, filter);
     return *this;
 }
 
@@ -266,12 +265,6 @@ void FrameBufferCube::build() {
 
     glGenFramebuffers(1, &this->object);
     glBindFramebuffer(GL_FRAMEBUFFER, this->object);
-    if (this->color != nullptr) {
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, this->color->id, 0);
-    } else {
-        glDrawBuffer(GL_NONE);
-        glReadBuffer(GL_NONE);
-    }
 
     if (depth) {
         glGenTextures(1, &this->depthCube);
@@ -294,8 +287,8 @@ void FrameBufferCube::build() {
 
 void FrameBufferCube::bind() const {
     glBindFramebuffer(GL_FRAMEBUFFER, this->object);
-    if (this->color != nullptr) {
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, this->color->id, 0);
+    if (this->color.id != 0) {
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, this->color.id, 0);
     } else {
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
@@ -304,8 +297,8 @@ void FrameBufferCube::bind() const {
 
 void FrameBufferCube::bind(GLenum target) const {
     glBindFramebuffer(GL_FRAMEBUFFER, this->object);
-    if (this->color != nullptr) {
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target, this->color->id, 0);
+    if (this->color.id != 0) {
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target, this->color.id, 0);
     } else {
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);

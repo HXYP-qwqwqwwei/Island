@@ -40,6 +40,7 @@ void DisableDepthTest();
 void SetupEnvironmentMap(const TextureCube* envMap);
 void RenderSkyBoxCube(const TextureCube& skyBoxTex, bool hdr = false);
 void RenderSkyBoxEquirectangular(const Texture2D& equirectangularTex);
+void GenDiffuseIrradianceMap(const TextureCube& envMap, GLsizei nSegments);
 
 /*======================== Rendering APIs ========================*/
 void RenderModelsInWorld(Camera& camera, RenderType type);

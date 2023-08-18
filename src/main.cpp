@@ -186,11 +186,11 @@ int main() {
 
     /**================ World and Lights ================**/
     InitWorld();
-    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(1.0f), 1024, 4, glm::vec3(.01));
-    CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(10.0f), 512);
-    CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0), 512);
-    CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 512);
-    CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 512);
+    SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(0.0f), 1024, 4, glm::vec3(.01));
+//    CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(10.0f), 512);
+//    CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0), 512);
+//    CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 512);
+//    CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 512);
 
     // HDR environment cube map from equirectangular texture
     FrameBufferCube hdrCubeEnvBuffer(loftEquirectangularTex.height);
@@ -203,12 +203,25 @@ int main() {
     envViews.push_back(glm::lookAt(glm::vec3(0), glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
     envViews.push_back(glm::lookAt(glm::vec3(0), glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
     envViews.push_back(glm::lookAt(glm::vec3(0), glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
-    for (size_t i = 0; i < 6; ++i) {
+    for (GLsizei i = 0; i < 6; ++i) {
         BindFrameBuffer(&hdrCubeEnvBuffer, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i);
+        ClearBuffer(GL_COLOR_BUFFER_BIT);
         SetupPVMatrix(envProj, envViews[i]);
         RenderSkyBoxEquirectangular(loftEquirectangularTex);
     }
     TextureCube loftCubeTex = hdrCubeEnvBuffer.getTexture();
+
+    FrameBufferCube envDiffIrradianceBuffer(32);
+    envDiffIrradianceBuffer.texture(GL_RGB16F).build();
+
+    for (GLsizei i = 0; i < 6; ++i) {
+        BindFrameBuffer(&envDiffIrradianceBuffer, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i);
+        ClearBuffer(GL_COLOR_BUFFER_BIT);
+        SetupPVMatrix(envProj, envViews[i]);
+        GenDiffuseIrradianceMap(loftCubeTex, 100);
+    }
+    TextureCube loftDiffIrradianceMap = envDiffIrradianceBuffer.getTexture();
+
 
 #ifdef ISLAND_ENABLE_DEFERRED_SHADING
 //    CreatePointLightNoShadow(glm::vec3(-3, 1, -3), glm::vec3(10.0f));
@@ -347,10 +360,10 @@ int main() {
         ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         EnableDepthTest();
 
-        SetupEnvironmentMap(&loftCubeTex);
-        RenderModelsInWorld(camera, SOLID);
+        SetupEnvironmentMap(&loftDiffIrradianceMap);
         RenderModelsInWorld(camera, PBR_SOLID);
-        RenderModelsInWorld(camera, CUTOUT);
+//        RenderModelsInWorld(camera, SOLID);
+//        RenderModelsInWorld(camera, CUTOUT);
         RenderModelsInWorld(camera, PURE);
 
         RenderSkyBoxCube(loftCubeTex, true);

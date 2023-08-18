@@ -109,6 +109,7 @@ public:
     static constexpr const char SSAO_KERNEL_RADIUS[]    = "radius";
     static constexpr const char SSAO_POWER[]            = "power";
     static constexpr const char SCREEN_SIZE[]           = "screenSize";
+    static constexpr const char N_SEGMENTS[]           = "nSegments";
 //    static constexpr const char PROJECTION[] = "proj";
     static constexpr const char CUBE_SPACE_MATRICES[6][21] = {
             "cubeSpaceMatrices[0]",
@@ -133,6 +134,7 @@ extern Shader* CutoutShader;
 extern Shader* SkyShader;
 extern Shader* SkyShaderHDR;
 extern Shader* SkyShaderEquirectangular;
+extern Shader* EnvDiffIrradianceShader;
 extern Shader* DepthShader;
 extern Shader* DepthCubeShader;
 

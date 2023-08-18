@@ -34,9 +34,10 @@ struct VertexCube {
 
 struct TextureCube {
     GLuint id = 0;
-    GLsizei width = 4;
-    GLsizei height = 4;
+    GLsizei length = 4;
     GLint internalFormat = GL_RGB;
+    GLint warp = GL_CLAMP_TO_EDGE;
+    GLint filter = GL_LINEAR;
 };
 
 struct Texture2D {
@@ -71,6 +72,9 @@ Texture2D createTexture2D(GLint format, GLint internalFormat, GLenum type, int w
                        GLint filter, bool genMipmap);
 
 Texture2D createTexture2D(GLint internalFormat, int width, int height, GLint warp, GLint filter);
+
+TextureCube createTextureCube(GLint internalFormat, int length, GLint warp, GLint filter);
+
 
 GLint tex_format(int nrChannels);
 GLint tex_format_f(int nrChannels);

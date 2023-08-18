@@ -66,7 +66,7 @@ public:
 
 class FrameBufferCube: Builder {
 private:
-    TextureCube* color  = nullptr;
+    TextureCube color;
     GLuint object       = 0;
     GLuint depthCube    = 0;
     bool built = false;
@@ -81,6 +81,7 @@ public:
 
     [[nodiscard]] TextureCube getDepthStencilTex() const;
     [[nodiscard]] TextureCube getTexture() const;
+    [[nodiscard]] TextureCube extractTexture();
 
     void bind() const;
     void bind(GLenum target) const;

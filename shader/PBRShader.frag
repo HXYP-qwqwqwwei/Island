@@ -55,11 +55,14 @@ uniform DirectLight directLight;
 uniform samplerCube environment;
 uniform Textures texes;
 
+const vec3 F0 = vec3(0.04);
+
 
 float D_GGX_TR(vec3 n, vec3 h, float roughness);
 float G_GGX_Schlick(float dot_val, float k);
 float G_Smith(float dot_nv, float dot_nl, float k);
-vec3 F_Schlick(float dot_hv, vec3 F0, vec3 albedo, float metalness);
+vec3 F_Schlick(float dot_hv, vec3 albedo, float metalness);
+vec3 F_Schlick_Lagarde(float dot_nh, vec3 albedo, float roughness, float metalness);
 
 void main() {
     float gamma = 2.2f;
@@ -79,6 +82,8 @@ void main() {
     float metalness = texture(texes.metalness0, fTexUV).r;
     float ao = texture(texes.ao0, fTexUV).r;
     vec3 albedo = texDiff.rgb;
+
+    vec3 f_lambert = albedo / PI;
 
     vec3 Lo = vec3(0.0f);
     for (int i = 0; i < MAX_N_PLIGHTS; ++i) {
@@ -101,18 +106,22 @@ void main() {
         float k_direct = a1 * a1 / 8.0;
 
         float D = D_GGX_TR(N, H, roughness);
-        vec3  F = F_Schlick(dot(H, V), vec3(0.04), albedo, metalness);
+        vec3  F = F_Schlick(dot(H, V), albedo, metalness);
         float G = G_Smith(dotNV, dotNL, k_direct);
 
         vec3 DFG = (D * G) * F;
         vec3 f_cook_torrance = DFG / (4.0 * dotNV * dotNL + 0.001);     // avoid divided by zero
-        vec3 f_lambert = albedo;
 
         vec3 ks = F;
         vec3 kd = (1.0 - ks) * (1.0 - metalness);
 
         Lo += (kd * f_lambert + ks * f_cook_torrance) * Li * dotNL;
     }
+
+    // IBL - Diffuse
+    vec3 ks = F_Schlick_Lagarde(dot(N, V), albedo, roughness, metalness);
+    vec3 kd = 1.0 - ks;
+    Lo += kd * f_lambert * texture(environment, N).rgb;
 
     vec3 ambient = directLight.ambient * albedo * ao;
 
@@ -142,10 +151,18 @@ float G_Smith(float dot_nv, float dot_nl, float k) {
     return G_GGX_Schlick(dot_nv, k) * G_GGX_Schlick(dot_nl, k);
 }
 
-vec3 F_Schlick(float dot_hv, vec3 F0, vec3 albedo, float metalness) {
-    F0 = mix(F0, albedo, metalness);
+vec3 F_Schlick(float dot_hv, vec3 albedo, float metalness) {
+    vec3 F = mix(F0, albedo, metalness);
     float temp = 1 - dot_hv;
     float temp2 = temp * temp;
     float temp4 = temp2 * temp2;
-    return F0 + (1.0 - F0) * temp * temp4;
+    return F + (1.0 - F) * temp * temp4;
+}
+
+vec3 F_Schlick_Lagarde(float dot_nh, vec3 albedo, float roughness, float metalness) {
+    vec3 F = mix(F0, albedo, metalness);
+    float temp = 1 - max(dot_nh, 0.0);
+    float temp2 = temp * temp;
+    float temp4 = temp2 * temp2;
+    return F + (max(vec3(1.0 - roughness), F) - F) * temp * temp4;
 }

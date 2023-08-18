@@ -194,6 +194,22 @@ void RenderSkyBoxEquirectangular(const Texture2D& equirectangularTex) {
     UnbindAllTextures();
 }
 
+void GenDiffuseIrradianceMap(const TextureCube& envMap, GLsizei nSegments) {
+    SkyBoxModel->setTextures({envMap});
+
+    Shader* shader = EnvDiffIrradianceShader;
+    shader->use();
+    shader->uniformInt(Shader::N_SEGMENTS, nSegments);
+
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    renderSkyBox(SkyBoxModel, shader);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+
+    UnbindAllTextures();
+}
+
 
 //void RenderWorld(Camera& camera, FrameBuffer& frame) {
 //

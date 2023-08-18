@@ -109,6 +109,22 @@ Texture2D createTexture2D(GLint internalFormat, int width, int height, GLint war
     return createTexture2D(GL_RGB, internalFormat, GL_UNSIGNED_BYTE, width, height, nullptr, warp, filter, false);
 }
 
+TextureCube createTextureCube(GLint internalFormat, int length, GLint warp, GLint filter) {
+    GLObject tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, tex);
+    for (int i = 0; i < 6; ++i) {
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat, length, length, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, warp);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, warp);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, warp);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, filter);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, filter);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    return {tex, length, internalFormat, warp, filter};
+}
+
 
 TextureCube load_cube_map(std::initializer_list<std::string> paths, const std::string& directory, bool flipUV) {
     GLuint id;

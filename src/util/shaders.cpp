@@ -16,6 +16,7 @@ Shader* CutoutShader;
 Shader* SkyShader;
 Shader* SkyShaderHDR;
 Shader* SkyShaderEquirectangular;
+Shader* EnvDiffIrradianceShader;
 Shader* DepthShader;
 Shader* DepthCubeShader;
 
@@ -119,6 +120,12 @@ void compileShaders() {
     SkyShaderEquirectangular->loadShader("SkyShader.vert", GL_VERTEX_SHADER);
     SkyShaderEquirectangular->loadShader("SkyShaderEquirectangular.frag", GL_FRAGMENT_SHADER);
     SkyShaderEquirectangular->link();
+
+    EnvDiffIrradianceShader = new Shader();
+    EnvDiffIrradianceShader->loadShader("SkyShader.vert", GL_VERTEX_SHADER);
+    EnvDiffIrradianceShader->loadShader("EnvDiffIrradianceShader.frag", GL_FRAGMENT_SHADER);
+    EnvDiffIrradianceShader->link();
+
 
     DepthShader = new Shader();
     DepthShader->loadShader("DepthShader.vert", GL_VERTEX_SHADER);
