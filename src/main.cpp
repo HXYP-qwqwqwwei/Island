@@ -70,8 +70,11 @@ int main() {
     Texture2DWithType toyBoxPara = load_texture("toy_box_disp.png", dir, aiTextureType_DISPLACEMENT);
 
     Texture2DWithType floorDiff = load_texture("plank_flooring_diff_1k.jpg", dir, aiTextureType_DIFFUSE);
-    Texture2DWithType floorSpec = load_texture("plank_flooring_rough_1k.jpg", dir, aiTextureType_SPECULAR);
+    Texture2DWithType floorRough = load_texture("plank_flooring_rough_1k.jpg", dir, aiTextureType_DIFFUSE_ROUGHNESS);
     Texture2DWithType floorNorm = load_texture("plank_flooring_nor_gl_1k.jpg", dir, aiTextureType_NORMALS);
+    Texture2DWithType floorAO = load_texture("plank_flooring_ao_1k.jpg", dir, aiTextureType_AMBIENT_OCCLUSION);
+    Texture2DWithType floorMetal = load_texture("plank_flooring_metallic_1k.jpg", dir, aiTextureType_METALNESS);
+
 //    Texture2DWithType floorPara = load_texture("plank_flooring_disp_1k.jpg", dir, aiTextureType_DISPLACEMENT);
     Texture2DWithType grassDiff = load_texture("grass.png", dir, aiTextureType_DIFFUSE, GL_CLAMP_TO_EDGE);
     Texture2DWithType windowTexDiff = load_texture("window_transparent.png", dir, aiTextureType_DIFFUSE);
@@ -80,6 +83,13 @@ int main() {
     Texture2DWithType rustyIronMetal = load_texture("rustediron2_metallic.png", dir, aiTextureType_METALNESS);
     Texture2DWithType rustyIronNorm = load_texture("rustediron2_normal.png", dir, aiTextureType_NORMALS);
     Texture2DWithType rustyIronRough = load_texture("rustediron2_roughness.png", dir, aiTextureType_DIFFUSE_ROUGHNESS);
+
+    Texture2DWithType used_stainless_steel2_diff = load_texture("used-stainless-steel2_albedo.png", dir, aiTextureType_DIFFUSE);
+    Texture2DWithType used_stainless_steel2_ao = load_texture("used-stainless-steel2_ao.png", dir, aiTextureType_AMBIENT_OCCLUSION);
+    Texture2DWithType used_stainless_steel2_metal = load_texture("used-stainless-steel2_metallic.png", dir, aiTextureType_METALNESS);
+    Texture2DWithType used_stainless_steel2_norm = load_texture("used-stainless-steel2_normal-ogl.png", dir, aiTextureType_NORMALS);
+    Texture2DWithType used_stainless_steel2_rough = load_texture("used-stainless-steel2_roughness.png", dir, aiTextureType_DIFFUSE_ROUGHNESS);
+
 
     [[maybe_unused]] TextureCube landscape = load_cube_map(
             {"landscape/right.jpg", "landscape/left.jpg", "landscape/top.jpg", "landscape/bottom.jpg", "landscape/front.jpg", "landscape/back.jpg"},
@@ -93,14 +103,18 @@ int main() {
     {
         auto cube           = [=]() -> Model {return shapes::Cube(1, {cubeDiff, cubeRefl, cubeSpec, cubeNorm});};
         auto lightCube      = [=]() -> Model {return shapes::Ball(0.1f, 20, 10);};
-        auto woodenFloor    = [=]() -> Model {return shapes::Rectangle(16, 16, {floorDiff, floorSpec, floorNorm});};
+        auto woodenFloor    = [=]() -> Model {
+            return shapes::Rectangle(16, 16, {
+                    floorDiff, floorRough, floorNorm, floorAO, floorMetal
+            });
+        };
         auto rgbWindow      = [=]() -> Model {return shapes::Rectangle(1, 1, {windowTexDiff});};
         auto grass          = [=]() -> Model {return shapes::Rectangle(1, 1, {grassDiff});};
         auto toyBox         = [=]() -> Model {
             return shapes::Cube(1, {toyBoxDiff, toyBoxNorm, toyBoxPara, toyBoxSpec});
         };
 
-        auto ball           = [=]() -> Model {
+        auto rustyIronBall           = [=]() -> Model {
             return shapes::Ball(0.5f, 600, 300, {
                     rustyIronDiff,
                     rustyIronMetal,
@@ -109,13 +123,25 @@ int main() {
             });
         };
 
+        auto steelBall1           = [=]() -> Model {
+            return shapes::Ball(0.5f, 600, 300, {
+                    used_stainless_steel2_diff,
+                    used_stainless_steel2_ao,
+                    used_stainless_steel2_metal,
+                    used_stainless_steel2_norm,
+                    used_stainless_steel2_rough
+            });
+        };
+
+
         MODEL_MANAGER.put(cube, "cube");
         MODEL_MANAGER.put(woodenFloor, "wooden_floor");
         MODEL_MANAGER.put(lightCube, "light_cube");
         MODEL_MANAGER.put(rgbWindow, "rgb_window");
         MODEL_MANAGER.put(grass, "grass");
         MODEL_MANAGER.put(toyBox, "toy_box");
-        MODEL_MANAGER.put(ball, "ball");
+        MODEL_MANAGER.put(rustyIronBall, "rusty_iron_ball");
+        MODEL_MANAGER.put(steelBall1, "steel_ball_1");
     }
 
 
@@ -187,13 +213,14 @@ int main() {
     /**================ World and Lights ================**/
     InitWorld();
     SetDirectLight(glm::vec3(-1, -2, -1.5), glm::vec3(0.0f), 1024, 4, glm::vec3(.01));
-//    CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(10.0f), 512);
-//    CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(30.0f, 0, 0), 512);
-//    CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 30.0f, 0), 512);
-//    CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 30.0f), 512);
+    CreatePointLight(glm::vec3(-3, 1, -3), glm::vec3(60.0f), 512);
+    CreatePointLight(glm::vec3( 3, 1, -3), glm::vec3(60.0f, 0, 0), 512);
+    CreatePointLight(glm::vec3(-3, 1,  3), glm::vec3(0, 60.0f, 0), 512);
+    CreatePointLight(glm::vec3( 3, 1,  3), glm::vec3(0, 0, 60.0f), 512);
 
+    GLsizei mipmapLevels = 5;
     // HDR environment cube map from equirectangular texture
-    FrameBufferCube hdrCubeEnvBuffer(loftEquirectangularTex.height);
+    FrameBufferCube hdrCubeEnvBuffer(loftEquirectangularTex.height, mipmapLevels);
     hdrCubeEnvBuffer.texture(GL_RGB16F).build();
     glm::mat4 envProj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 1.0f);
     std::vector<glm::mat4> envViews;
@@ -204,13 +231,16 @@ int main() {
     envViews.push_back(glm::lookAt(glm::vec3(0), glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
     envViews.push_back(glm::lookAt(glm::vec3(0), glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
     for (GLsizei i = 0; i < 6; ++i) {
-        BindFrameBuffer(&hdrCubeEnvBuffer, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i);
-        ClearBuffer(GL_COLOR_BUFFER_BIT);
         SetupPVMatrix(envProj, envViews[i]);
-        RenderSkyBoxEquirectangular(loftEquirectangularTex);
+        for (GLsizei mip = 0; mip < mipmapLevels; ++mip) {
+            BindFrameBuffer(&hdrCubeEnvBuffer, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, mip);
+            ClearBuffer(GL_COLOR_BUFFER_BIT);
+            RenderSkyBoxEquirectangular(loftEquirectangularTex);
+        }
     }
     TextureCube loftCubeTex = hdrCubeEnvBuffer.getTexture();
 
+    /*================ Environment Diffuse Irradiance Map ================*/
     FrameBufferCube envDiffIrradianceBuffer(32);
     envDiffIrradianceBuffer.texture(GL_RGB16F).build();
 
@@ -221,6 +251,30 @@ int main() {
         GenDiffuseIrradianceMap(loftCubeTex, 100);
     }
     TextureCube loftDiffIrradianceMap = envDiffIrradianceBuffer.getTexture();
+
+    /*================ Prefiltered Environment Map ================*/
+    GLsizei length = 128;
+    GLsizei nSamples = 4096;
+    FrameBufferCube envPrefilteredBuffer(length, mipmapLevels);
+    envPrefilteredBuffer.texture(GL_RGB16F).build();
+    for (GLsizei i = 0; i < 6; ++i) {
+        SetupPVMatrix(envProj, envViews[i]);
+        for (GLsizei mip = 0; mip < mipmapLevels; ++mip) {
+            BindFrameBuffer(&envPrefilteredBuffer, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, mip);
+            ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            GenPrefilteredMap(loftCubeTex, nSamples, GLfloat(mip) / GLfloat(mipmapLevels-1));
+        }
+    }
+    TextureCube loftPrefilteredMap = envPrefilteredBuffer.getTexture();
+
+    /*================ integrated BRDF LUT ================*/
+    GLsizei brdfLen = 512;
+    GLsizei brdfSamples = 1024;
+    FrameBuffer brdfBuffer(brdfLen, brdfLen);
+    brdfBuffer.texture(GL_RG16F).build();
+    BindFrameBuffer(&brdfBuffer);
+    GenIntegratedBRDF(brdfSamples);
+    Texture2D brdfLUT = brdfBuffer.getTexture();
 
 
 #ifdef ISLAND_ENABLE_DEFERRED_SHADING
@@ -269,21 +323,15 @@ int main() {
 
         /*================ Decorate World Objects ================*/
         modelMtx = glm::mat4(1.0);
-        ModelInfo boxes = MODEL_MANAGER.createInfo("cube");
-        boxes.addInstance(modelMtx);
-        boxes.addInstance(glm::translate(modelMtx, glm::vec3(-1, 0, -2)));
-        PutModelInfo(SOLID, &boxes);
+#ifdef ISLAND_PBR
+        ModelInfo rustyIronBall = MODEL_MANAGER.createInfo("rusty_iron_ball");
+        rustyIronBall.addInstance(glm::translate(modelMtx, glm::vec3(-1, 0, 0)));
+        PutModelInfo(SOLID, &rustyIronBall);
 
-        ModelInfo toyBoxes = MODEL_MANAGER.createInfo("toy_box");
-        toyBoxes.addInstance(glm::translate(modelMtx, glm::vec3(-2, 0, -4)));
-        PutModelInfo(SOLID, &toyBoxes);
+        ModelInfo steelBall1 = MODEL_MANAGER.createInfo("steel_ball_1");
+        steelBall1.addInstance(glm::translate(modelMtx, glm::vec3(1, 0, 0)));
+        PutModelInfo(SOLID, &steelBall1);
 
-        ModelInfo ball = MODEL_MANAGER.createInfo("ball");
-        ball.addInstance(glm::translate(modelMtx, glm::vec3(0, 2, 0)));
-        PutModelInfo(PBR_SOLID, &ball);
-
-
-/*
         const int range = 8;
         const int amount = (2 * range + 1) * (2 * range + 1);
         std::vector<glm::mat4> floorMats;
@@ -304,7 +352,19 @@ int main() {
         ModelInfo floors = MODEL_MANAGER.createInfo("wooden_floor");
         floors.addInstance(floorMats);
         PutModelInfo(SOLID, &floors);
-*/
+
+#else
+        ModelInfo boxes = MODEL_MANAGER.createInfo("cube");
+        boxes.addInstance(modelMtx);
+        boxes.addInstance(glm::translate(modelMtx, glm::vec3(-1, 0, -2)));
+        PutModelInfo(SOLID, &boxes);
+
+        ModelInfo toyBoxes = MODEL_MANAGER.createInfo("toy_box");
+        toyBoxes.addInstance(glm::translate(modelMtx, glm::vec3(-2, 0, -4)));
+        PutModelInfo(SOLID, &toyBoxes);
+
+
+
 
 
         ModelInfo grasses = MODEL_MANAGER.createInfo("grass");
@@ -333,6 +393,7 @@ int main() {
         });
         PutModelInfo(TRANSPARENT, &rgb_windows);
 */
+#endif
 
         /*================ Render World ================*/
         SetupPVMatrix(camera);
@@ -360,13 +421,14 @@ int main() {
         ClearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         EnableDepthTest();
 
-        SetupEnvironmentMap(&loftDiffIrradianceMap);
-        RenderModelsInWorld(camera, PBR_SOLID);
+//        SetupEnvironmentMap(&loftDiffIrradianceMap);
+//        SetupPBREnvironmentMap(&loftDiffIrradianceMap, &loftPrefilteredMap, &brdfLUT);
+        RenderPBRModelsInWorld(camera, SOLID);
 //        RenderModelsInWorld(camera, SOLID);
 //        RenderModelsInWorld(camera, CUTOUT);
         RenderModelsInWorld(camera, PURE);
 
-        RenderSkyBoxCube(loftCubeTex, true);
+//        RenderSkyBoxCube(loftCubeTex, true);
 #endif
 
 

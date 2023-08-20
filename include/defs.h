@@ -24,6 +24,9 @@ typedef GLuint GLObject;
 #define DEFAULT_TEXTURE_ROUGH   24
 
 #define ENVIRONMENT_MAP_TEX     15
+#define ENVIRONMENT_DIFFUSE     15
+#define ENVIRONMENT_PREFILTERED 14
+#define BRDF_LOOK_UP_TEXTURE    13
 
 #define POINT_SHADOW_MAP0       16
 #define POINT_SHADOW_MAP1       17

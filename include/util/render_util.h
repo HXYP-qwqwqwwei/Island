@@ -49,6 +49,10 @@ private:
 void render(const Model* model, RenderType type, const Camera& camera, const glm::mat4* transMtx, size_t amount,
             const Light& light, const TextureCube& envMap);
 
+void renderPBR(const Model* model, RenderType type, const Camera& camera, const glm::mat4* transMtx, size_t amount,
+            const Light& light, const TextureCube& envDiff, const TextureCube& envPrefiltered, const Texture2D& brdfLUT);
+
+
 //void render(const Model* model, RenderType type, const Camera& camera, const glm::mat4& transMtx, const Light& light);
 
 //void renderSkyBox(const SkyBox* skyBox);

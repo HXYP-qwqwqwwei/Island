@@ -7,7 +7,6 @@
 
 in vec3 fPos;       // view-space
 in vec2 fTexUV;
-in vec3 viewVec_tanSpace;
 in mat3 TBN;        // tan-space -> view-space
 in vec4 fPosLiSpace[MAX_CSM_LEVELS];
 
@@ -52,7 +51,10 @@ struct DirectLight {
 uniform PointLight pointLights[MAX_N_PLIGHTS];
 uniform DirectLight directLight;
 
-uniform samplerCube environment;
+uniform samplerCube envIrradiance;
+uniform samplerCube envPrefiltered;
+uniform sampler2D brdfLookUpTex;
+uniform int mipmapLevels = 5;
 uniform Textures texes;
 
 const vec3 F0 = vec3(0.04);
@@ -63,6 +65,7 @@ float G_GGX_Schlick(float dot_val, float k);
 float G_Smith(float dot_nv, float dot_nl, float k);
 vec3 F_Schlick(float dot_hv, vec3 albedo, float metalness);
 vec3 F_Schlick_Lagarde(float dot_nh, vec3 albedo, float roughness, float metalness);
+float pointLightShadow(samplerCube depthTex, vec3 fPos, vec3 lightPos, vec3 norm, float zFar);
 
 void main() {
     float gamma = 2.2f;
@@ -72,7 +75,7 @@ void main() {
     }
     texDiff = vec4(pow(texDiff.rgb, vec3(gamma)), texDiff.a);     // Transfer to Linear Space
 
-
+    mat3 view_inv3x3 = transpose(mat3(view));
     vec3 V = normalize(-fPos);
     vec3 N = texture(texes.normals0, fTexUV).xyz;
     N = N * 2.0 - 1.0;
@@ -81,6 +84,7 @@ void main() {
     float roughness = texture(texes.roughness0, fTexUV).r;
     float metalness = texture(texes.metalness0, fTexUV).r;
     float ao = texture(texes.ao0, fTexUV).r;
+    ao = pow(ao, gamma);
     vec3 albedo = texDiff.rgb;
 
     vec3 f_lambert = albedo / PI;
@@ -95,7 +99,9 @@ void main() {
         float Kl = pointLights[i].attenu.y;
         float Kq = pointLights[i].attenu.z;
         float attenu = 1.0 / (Kc + Kl*dis + Kq*dis*dis);
-        vec3 Li = attenu * pointLights[i].color * 2.0;
+
+        float shadow = pointLightShadow(pointLights[i].depthTex, fPos, LiPos, N, pointLights[i].zNearFar.y);
+        vec3 Li = (1.0-shadow) * attenu * pointLights[i].color * 2.0;
 
         L = normalize(L);
         vec3 H = normalize(L + V);
@@ -110,7 +116,7 @@ void main() {
         float G = G_Smith(dotNV, dotNL, k_direct);
 
         vec3 DFG = (D * G) * F;
-        vec3 f_cook_torrance = DFG / (4.0 * dotNV * dotNL + 0.001);     // avoid divided by zero
+        vec3 f_cook_torrance = DFG / (4.0 * dotNV * dotNL + 1e-6);     // avoid divided by zero
 
         vec3 ks = F;
         vec3 kd = (1.0 - ks) * (1.0 - metalness);
@@ -119,13 +125,21 @@ void main() {
     }
 
     // IBL - Diffuse
-    vec3 ks = F_Schlick_Lagarde(dot(N, V), albedo, roughness, metalness);
+    vec3 envDiffuse = f_lambert * texture(envIrradiance, view_inv3x3 * N).rgb;
+
+    // IBL - Specular
+    vec3 F = F_Schlick_Lagarde(dot(N, V), albedo, roughness, metalness);
+    vec3 R = view_inv3x3 * reflect(-V, N);
+    float lod = roughness * (mipmapLevels - 1);
+    vec3 prefiltered = textureLod(envPrefiltered, R, lod).rgb;
+    vec2 brdf = texture(brdfLookUpTex, vec2(max(dot(N, V), 0.0), roughness)).rg;
+    vec3 envSpecular = prefiltered * (F * brdf.x + brdf.y);
+
+    vec3 ks = F;
     vec3 kd = 1.0 - ks;
-    Lo += kd * f_lambert * texture(environment, N).rgb;
+    Lo += (kd * envDiffuse + envSpecular) * ao;
 
-    vec3 ambient = directLight.ambient * albedo * ao;
-
-    fragColor = vec4(ambient + Lo, 1.0);
+    fragColor = vec4(Lo, 1.0);
     brightColor = vec4(0);
 
 //    float brightness = dot(fragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
@@ -165,4 +179,28 @@ vec3 F_Schlick_Lagarde(float dot_nh, vec3 albedo, float roughness, float metalne
     float temp2 = temp * temp;
     float temp4 = temp2 * temp2;
     return F + (max(vec3(1.0 - roughness), F) - F) * temp * temp4;
+}
+
+vec3 cubeSampleOffsets[20] = {
+        vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1),
+        vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
+        vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
+        vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
+        vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
+};
+
+float pointLightShadow(samplerCube depthTex, vec3 fPos, vec3 lightPos, vec3 norm, float zFar) {
+    vec3 inj_ViSpace = fPos - lightPos;
+    vec3 inj_WoSpace = transpose(mat3(view)) * inj_ViSpace;
+    float currDepth = length(inj_ViSpace);
+
+    // PCF
+    float bias = max(0.1 * (1.0 - dot(norm, -normalize(inj_ViSpace))), 0.002);
+    float shadow = 0;
+    for (int i = 0; i < 20; ++i) {
+        float depth = texture(depthTex, inj_WoSpace + cubeSampleOffsets[i] * 0.005).r;
+        depth *= zFar;
+        shadow += (currDepth - bias) > depth ? 1.0 : 0.0;
+    }
+    return shadow / 20;
 }

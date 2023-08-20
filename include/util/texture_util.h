@@ -73,11 +73,12 @@ Texture2D createTexture2D(GLint format, GLint internalFormat, GLenum type, int w
 
 Texture2D createTexture2D(GLint internalFormat, int width, int height, GLint warp, GLint filter);
 
-TextureCube createTextureCube(GLint internalFormat, int length, GLint warp, GLint filter);
+TextureCube createTextureCube(GLint internalFormat, GLsizei length, GLint warp, GLint filter, GLboolean genMipmap);
 
 
 GLint tex_format(int nrChannels);
 GLint tex_format_f(int nrChannels);
+GLint mipmap_filter(GLint baseFilter);
 Texture2D load_texture(const char* path, const std::string& directory, GLint warp = GL_REPEAT, GLint filter = GL_LINEAR, bool flipUV = true);
 Texture2D load_texture_HDR(const char* path, const std::string& directory, GLint warp = GL_REPEAT, GLint filter = GL_LINEAR, bool flipUV = true);
 TextureCube load_cube_map(std::initializer_list<std::string> paths, const std::string& directory, bool flipUV = false);

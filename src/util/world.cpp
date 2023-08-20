@@ -22,6 +22,10 @@ static FrameBuffer* BlurREDBuffer;
 static Screen* screen;
 
 TextureCube EnvironmentCubeMap;
+TextureCube EnvironmentDiffuseMap;
+TextureCube EnvironmentPrefilteredMap;
+Texture2D BRDFLookUpTex;
+
 SkyBox* SkyBoxModel;
 SkyBoxEquirectangular* SkyBoxEquirectangularModel;
 
@@ -35,6 +39,7 @@ void PutCSMFrustums(Camera &camera, std::vector<CascadedShadowMap> &shadows);
 void InitWorld() {
     glEnable(GL_STENCIL_TEST);
     glEnable(GL_CULL_FACE);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
     BlurRGBBuffer = &((new FrameBuffer(GameScrWidth, GameScrHeight))->texture(GL_RGB16F));
     BlurRGBBuffer->build();
@@ -51,6 +56,10 @@ void InitWorld() {
     EnvironmentCubeMap = textures::EMPTY_ENV_MAP;
     SkyBoxModel = shapes::SkyBoxCube();
     SkyBoxEquirectangularModel = shapes::SkyBoxCubeEquirectangular();
+
+    EnvironmentDiffuseMap = textures::EMPTY_ENV_MAP;
+    EnvironmentPrefilteredMap = textures::EMPTY_ENV_MAP;
+    BRDFLookUpTex = textures::BLACK_RGB;
 }
 
 
@@ -77,9 +86,8 @@ void BindFrameBuffer(FrameBuffer* frame) {
     BoundFrame = frame;
 }
 
-void BindFrameBuffer(FrameBufferCube* frame, GLenum target) {
-    glViewport(0, 0, frame->length, frame->length);
-    frame->bind(target);
+void BindFrameBuffer(FrameBufferCube* frame, GLenum target, GLsizei mip) {
+    frame->bind(target, mip);
 }
 
 void ClearBuffer(int bits) {
@@ -116,6 +124,29 @@ void RenderModelsInWorld(Camera &camera, RenderType type) {
     }
 
     UnbindAllTextures();
+}
+
+void RenderPBRModelsInWorld(Camera& camera, RenderType type) {
+    Light light(DirectLight, PointLights);
+
+    const std::vector<const ModelInfo*>& models = Models[type];
+    if (type == PURE) {
+        ModelInfo lightCubes = MODEL_MANAGER.createInfo("light_cube");
+        if (!PointLights.empty()) {
+            renderLightModels(MODEL_MANAGER[lightCubes.id], &PointLights[0], PointLights.size());
+        }
+        if (!PointLightsNoShadow.empty()) {
+            renderLightModels(MODEL_MANAGER[lightCubes.id], &PointLightsNoShadow[0], PointLightsNoShadow.size());
+        }
+    } else {
+        for (auto* info: models) {
+            renderPBR(MODEL_MANAGER[info->id], type, camera, &info->transMatrices[0], info->transMatrices.size(),
+                      light, EnvironmentDiffuseMap, EnvironmentPrefilteredMap, BRDFLookUpTex);
+        }
+    }
+
+    UnbindAllTextures();
+
 }
 
 void RenderWorldGBuffer(Camera& camera, RenderType type) {
@@ -174,10 +205,28 @@ void SetupEnvironmentMap(const TextureCube* envMap) {
     EnvironmentCubeMap = *envMap;
 }
 
-void RenderSkyBoxCube(const TextureCube& skyBoxTex, bool hdr) {
+void SetupPBREnvironmentMap(const TextureCube* envDiff, const TextureCube* envPrefiltered, const Texture2D* brdfLUT) {
+    if (envDiff == nullptr) {
+        EnvironmentDiffuseMap = textures::EMPTY_ENV_MAP;
+    } else EnvironmentDiffuseMap = *envDiff;
+
+    if (envPrefiltered == nullptr) {
+        EnvironmentPrefilteredMap = textures::EMPTY_ENV_MAP;
+    } else EnvironmentPrefilteredMap = *envPrefiltered;
+
+    if (brdfLUT == nullptr) {
+        BRDFLookUpTex = textures::BLACK_RGB;
+    } else BRDFLookUpTex = *brdfLUT;
+
+}
+
+void RenderSkyBoxCube(const TextureCube& skyBoxTex, bool hdr, GLfloat lod) {
     SkyBoxModel->setTextures({skyBoxTex});
     glDepthFunc(GL_LEQUAL);
     glDepthMask(GL_FALSE);
+    const Shader* shader = hdr ? SkyShaderHDR : SkyShader;
+    shader->use();
+    shader->uniformFloat("lod", lod);
     renderSkyBox(SkyBoxModel, hdr ? SkyShaderHDR : SkyShader);
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);
@@ -197,7 +246,7 @@ void RenderSkyBoxEquirectangular(const Texture2D& equirectangularTex) {
 void GenDiffuseIrradianceMap(const TextureCube& envMap, GLsizei nSegments) {
     SkyBoxModel->setTextures({envMap});
 
-    Shader* shader = EnvDiffIrradianceShader;
+    const Shader* shader = EnvDiffIrradianceShader;
     shader->use();
     shader->uniformInt(Shader::N_SEGMENTS, nSegments);
 
@@ -206,6 +255,32 @@ void GenDiffuseIrradianceMap(const TextureCube& envMap, GLsizei nSegments) {
     renderSkyBox(SkyBoxModel, shader);
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);
+
+    UnbindAllTextures();
+}
+
+void GenPrefilteredMap(const TextureCube& envMap, GLsizei nSamples, GLfloat roughness) {
+    SkyBoxModel->setTextures({envMap});
+
+    const Shader* shader = EnvSpecPrefilterShader;
+    shader->use();
+    shader->uniformFloat(Shader::ROUGHNESS, roughness);
+    shader->uniformUInt(Shader::N_SAMPLES, nSamples);
+
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    renderSkyBox(SkyBoxModel, shader);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+
+    UnbindAllTextures();
+}
+
+void GenIntegratedBRDF(GLsizei nSamples) {
+    const Shader* shader = IntegrateBRDFShader;
+    shader->use();
+    shader->uniformUInt(Shader::N_SAMPLES, nSamples);
+    screen->draw(*shader);
 
     UnbindAllTextures();
 }

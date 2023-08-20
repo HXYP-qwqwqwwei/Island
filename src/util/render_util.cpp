@@ -56,6 +56,20 @@ void render(const Model* model, RenderType type, const Camera& camera, const glm
     model->draw(*shader, mtxBuf);
 }
 
+void renderPBR(const Model* model, RenderType type, const Camera& camera, const glm::mat4* transMtx, size_t amount,
+               const Light& light, const TextureCube& envDiff, const TextureCube& envPrefiltered, const Texture2D& brdfLUT) {
+    const Shader* shader = selectPBRShader(type);
+    shader->use();
+    shader->setEnvironmentDiffuse(envDiff.id);
+    shader->setEnvironmentPrefiltered(envPrefiltered.id);
+    shader->setBRDFLookUpTex(brdfLUT.id);
+
+    setupLight(shader, light);
+    Buffer mtxBuf(GL_ARRAY_BUFFER);
+    mtxBuf.putData(amount * SZ_MAT4F, transMtx);
+    model->draw(*shader, mtxBuf);
+}
+
 //void render(const Model* model, RenderType type, const Camera& camera, const glm::mat4& transMtx, const Light& light) {
 //    render(model, type, camera, &transMtx, 1, light);
 //}

@@ -12,10 +12,10 @@ layout (location = 1) out vec4 brightColor;
 void main() {
     vec3 nVec = normalize(fTexUVW);
 
-    float beta  = atan(nVec.x, nVec.z);
-    float alpha = asin(nVec.y);
+    float phi = -atan(nVec.x, nVec.z);
+    float theta = asin(nVec.y);
 
-    vec2 uv = vec2(beta, alpha) / vec2(TWO_PI, PI);
+    vec2 uv = vec2(phi, theta) / vec2(TWO_PI, PI);
     uv = uv + 0.5;
 
     vec3 color = texture(texture0, uv).rgb;

@@ -31,7 +31,7 @@ void main() {
             float cosTheta = cos(theta);
 
             vec3 v = TBN * vec3(sinTheta * cos(phi), sinTheta * sin(phi), cos(theta));  // In tangent-space
-            vec3 L = texture(texture0, v).rgb;
+            vec3 L = textureLod(texture0, v, 0.0).rgb;
             irradiance += (L * sinTheta * cosTheta);
         }
     }

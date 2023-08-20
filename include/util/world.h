@@ -29,7 +29,7 @@ void Flush();
 
 /*======================== FrameBuffers ========================*/
 void BindFrameBuffer(FrameBuffer* frame);
-void BindFrameBuffer(FrameBufferCube* frame, GLenum target);
+void BindFrameBuffer(FrameBufferCube* frame, GLenum target, GLsizei mip = 0);
 void ClearBuffer(int bits);
 void ClearBuffer(int bits, float r, float g, float b);
 void EnableDepthTest(GLenum func = GL_LESS);
@@ -38,12 +38,16 @@ void DisableDepthTest();
 
 /*======================== Environment and SkyBox ========================*/
 void SetupEnvironmentMap(const TextureCube* envMap);
-void RenderSkyBoxCube(const TextureCube& skyBoxTex, bool hdr = false);
+void SetupPBREnvironmentMap(const TextureCube* envDiff, const TextureCube* envPrefiltered, const Texture2D* brdfLUT);
+void RenderSkyBoxCube(const TextureCube& skyBoxTex, bool hdr = false, GLfloat lod = 0.0);
 void RenderSkyBoxEquirectangular(const Texture2D& equirectangularTex);
 void GenDiffuseIrradianceMap(const TextureCube& envMap, GLsizei nSegments);
+void GenPrefilteredMap(const TextureCube& envMap, GLsizei nSamples, GLfloat roughness);
+void GenIntegratedBRDF(GLsizei nSamples);
 
 /*======================== Rendering APIs ========================*/
 void RenderModelsInWorld(Camera& camera, RenderType type);
+void RenderPBRModelsInWorld(Camera& camera, RenderType type);
 void SetupPVMatrix(Camera& camera);
 void SetupPVMatrix(glm::mat4 proj, glm::mat4 view);
 void RenderWorldGBuffer(Camera& camera, RenderType type);

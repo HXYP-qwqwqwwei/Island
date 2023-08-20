@@ -67,25 +67,28 @@ public:
 class FrameBufferCube: Builder {
 private:
     TextureCube color;
-    GLuint object       = 0;
-    GLuint depthCube    = 0;
-    bool built = false;
-    bool depth = false;
+    GLObject object      = 0;
+    GLObject depthCube   = 0;
+    const GLsizei mipmapLevels = 1;
+    bool built  = false;
+    bool depth  = false;
+    bool useRBO = false;
 
 public:
     const GLsizei length;
-    explicit FrameBufferCube(GLsizei length);
+    explicit FrameBufferCube(GLsizei length, GLsizei maxMipmapLevels = 1);
     FrameBufferCube& texture(GLint internalFormat, GLint warp = GL_CLAMP_TO_EDGE, GLint filter = GL_LINEAR);
     FrameBufferCube& withDepth();
+    [[deprecated]]FrameBufferCube& withStencil();
+    FrameBufferCube& useRenderBuffer();
     void build() override;
 
     [[nodiscard]] TextureCube getDepthStencilTex() const;
     [[nodiscard]] TextureCube getTexture() const;
     [[nodiscard]] TextureCube extractTexture();
 
-    void bind() const;
-    void bind(GLenum target) const;
-    [[deprecated]]FrameBufferCube& withStencil();
+    void bind(GLsizei mipLevel = 0) const;
+    void bind(GLenum target, GLsizei mipLevel) const;
 };
 
 

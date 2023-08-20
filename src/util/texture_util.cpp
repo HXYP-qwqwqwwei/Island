@@ -95,12 +95,15 @@ Texture2D createTexture2D(GLint format, GLint internalFormat, GLenum type, int w
     glBindTexture(GL_TEXTURE_2D, id);
     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, data);
 
-    if (genMipmap)
+    if (genMipmap) {
         glGenerateMipmap(GL_TEXTURE_2D);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, mipmap_filter(filter));
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+    }
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, warp);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, warp);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
     return {id, width, height, internalFormat};
 }
@@ -109,17 +112,22 @@ Texture2D createTexture2D(GLint internalFormat, int width, int height, GLint war
     return createTexture2D(GL_RGB, internalFormat, GL_UNSIGNED_BYTE, width, height, nullptr, warp, filter, false);
 }
 
-TextureCube createTextureCube(GLint internalFormat, int length, GLint warp, GLint filter) {
+TextureCube createTextureCube(GLint internalFormat, GLsizei length, GLint warp, GLint filter, GLboolean genMipmap) {
     GLObject tex;
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_CUBE_MAP, tex);
     for (int i = 0; i < 6; ++i) {
         glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat, length, length, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
     }
+    if (genMipmap) {
+        glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, mipmap_filter(filter));
+    } else {
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, filter);
+    }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, warp);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, warp);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, warp);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, filter);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, filter);
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
     return {tex, length, internalFormat, warp, filter};
@@ -205,6 +213,16 @@ GLint tex_format_f(int nrChannels) {
             return GL_RGBA16F;
         default:
             return -1;
+    }
+}
+
+GLint mipmap_filter(GLint baseFilter) {
+    switch (baseFilter) {
+        case GL_LINEAR:
+            return GL_LINEAR_MIPMAP_LINEAR;
+        case GL_NEAREST:
+        default:
+            return GL_NEAREST_MIPMAP_LINEAR;
     }
 }
 
