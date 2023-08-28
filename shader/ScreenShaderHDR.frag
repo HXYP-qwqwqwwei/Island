@@ -12,9 +12,9 @@ void main() {
     colorHDR += bloom;
     float gamma = 2.2;
     // Reinhard
-//    vec3 mapped = colorHDR / (colorHDR + vec3(1.0));
+    vec3 mapped = colorHDR / (colorHDR + vec3(1.0));
 
-    // exposure
-    vec3 mapped = vec3(1.0) - exp(-colorHDR * 1.0);
-    fragColor = vec4(pow(mapped, vec3(1/gamma)), 1);
+    // Exposure
+//    vec3 mapped = vec3(1.0) - exp(-colorHDR * 1.0);
+    fragColor = vec4(pow(mapped, vec3(1.0/gamma)), 1);
 }

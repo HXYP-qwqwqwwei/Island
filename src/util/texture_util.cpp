@@ -18,7 +18,7 @@ TextureCube textures::NO_POINT_SHADOW;
 
 
 void textures::loadDefaultTextures(const std::string& dir) {
-    MISSING = load_texture("missing.png", dir, GL_CLAMP_TO_EDGE, GL_NEAREST);
+    MISSING = load_texture("missing.png", dir, GL_REPEAT, GL_NEAREST);
     BLACK_RGB = load_texture("pure_black.png", dir);
     WHITE_RGB = load_texture("pure_white.png", dir);
     BLACK_GRAY = load_texture("pure_black_gray.png", dir);
@@ -46,14 +46,16 @@ Texture2D load_texture(const char* path, const std::string& directory, GLint war
     int width, height, nrChannels;
     std::string fullPath = directory + '/' + path;
     stbi_set_flip_vertically_on_load(flipUV);
-    unsigned char* data = stbi_load(fullPath.c_str(), &width, &height, &nrChannels, 0);
+    void* data = stbi_load(fullPath.c_str(), &width, &height, &nrChannels, 0);
     if (data == nullptr) {
-        std::cerr << "ERROR::TEXTURE::Failed to load texture at \"" << fullPath << "\"\n";
+        std::cerr << "ERROR::TEXTURE::Failed to load texture \"" << fullPath << "\"\n";
         return {};
     }
     GLint format = tex_format(nrChannels);
     if (format == -1) {
         stbi_image_free(data);
+        std::cerr << "ERROR::TEXTURE::Unsupported file format.\n";
+        std::cerr << "    Failed to load HDR texture \"" << fullPath << "\"\n";
         return {};
     }
     auto tex = createTexture2D(format, format, GL_UNSIGNED_BYTE, width, height, data, warp, filter, true);
@@ -62,6 +64,30 @@ Texture2D load_texture(const char* path, const std::string& directory, GLint war
     return tex;
 }
 
+
+Texture2D load_texture_HDR(const char *path, const std::string &directory, GLint warp, GLint filter, bool flipUV) {
+    int width, height, nrChannels;
+    std::string fullPath = directory + '/' + path;
+    stbi_set_flip_vertically_on_load(flipUV);
+    void* data = stbi_loadf(fullPath.c_str(), &width, &height, &nrChannels, 0);
+    if (data == nullptr) {
+        std::cerr << "ERROR::TEXTURE::Failed to load HDR texture \"" << fullPath << "\"\n";
+        return {};
+    }
+    GLint format = tex_format(nrChannels);
+    GLint internalFormat = tex_format_f(nrChannels);
+    if (format == -1) {
+        stbi_image_free(data);
+        std::cerr << "ERROR::TEXTURE::Unsupported file format.\n";
+        std::cerr << "    Failed to load HDR texture \"" << fullPath << "\"\n";
+        return {};
+    }
+    auto tex = createTexture2D(format, internalFormat, GL_FLOAT, width, height, data, warp, filter, true);
+    stbi_image_free(data);
+    return tex;
+}
+
+
 Texture2D createTexture2D(GLint format, GLint internalFormat, GLenum type, int width, int height, const void *data, GLint warp,
                        GLint filter, bool genMipmap) {
     GLuint id;
@@ -69,14 +95,42 @@ Texture2D createTexture2D(GLint format, GLint internalFormat, GLenum type, int w
     glBindTexture(GL_TEXTURE_2D, id);
     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, data);
 
-    if (genMipmap)
+    if (genMipmap) {
         glGenerateMipmap(GL_TEXTURE_2D);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, mipmap_filter(filter));
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+    }
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, warp);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, warp);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
     return {id, width, height, internalFormat};
+}
+
+Texture2D createTexture2D(GLint internalFormat, int width, int height, GLint warp, GLint filter) {
+    return createTexture2D(GL_RGB, internalFormat, GL_UNSIGNED_BYTE, width, height, nullptr, warp, filter, false);
+}
+
+TextureCube createTextureCube(GLint internalFormat, GLsizei length, GLint warp, GLint filter, GLboolean genMipmap) {
+    GLObject tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, tex);
+    for (int i = 0; i < 6; ++i) {
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat, length, length, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    }
+    if (genMipmap) {
+        glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, mipmap_filter(filter));
+    } else {
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, filter);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, warp);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, warp);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, warp);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, filter);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    return {tex, length, internalFormat, warp, filter};
 }
 
 
@@ -143,8 +197,32 @@ GLint tex_format(int nrChannels) {
         case 4:
             return GL_RGBA;
         default:
-            std::cerr << "ERROR::TEXTURE::Unsupported file format\n";
             return -1;
+    }
+}
+
+GLint tex_format_f(int nrChannels) {
+    switch (nrChannels) {
+        case 1:
+            return GL_R16F;
+        case 2:
+            return GL_RG16F;
+        case 3:
+            return GL_RGB16F;
+        case 4:
+            return GL_RGBA16F;
+        default:
+            return -1;
+    }
+}
+
+GLint mipmap_filter(GLint baseFilter) {
+    switch (baseFilter) {
+        case GL_LINEAR:
+            return GL_LINEAR_MIPMAP_LINEAR;
+        case GL_NEAREST:
+        default:
+            return GL_NEAREST_MIPMAP_LINEAR;
     }
 }
 

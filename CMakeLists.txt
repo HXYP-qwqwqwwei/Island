@@ -6,10 +6,11 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 
 add_executable(
         Island
+        src/main.cpp
         src/glad.c
         src/util/shaders.cpp
         src/util/Camera.cpp
-        src/util/stb_image.cpp
+        src/stb_image.cpp
         src/util/game_util.cpp
         src/util/debug.cpp
         src/util/materials.cpp
@@ -25,8 +26,9 @@ add_executable(
         src/util/light_util.cpp
         src/util/render_util.cpp
         src/util/ClientWorld.cpp
-        src/main.cpp
-        src/util/world.cpp include/util/world.h)
+        src/util/world.cpp
+        src/util/Builder.cpp
+)
 
 INCLUDE_DIRECTORIES(include)
 target_link_libraries(Island

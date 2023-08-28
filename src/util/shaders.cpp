@@ -7,20 +7,35 @@
 
 
 Shader* VoidShader;
+
+// forward shaders
 Shader* SolidShader;
 Shader* SimpleShader;
 Shader* TransparentShader;
 Shader* CutoutShader;
-Shader* ScreenShader;
-Shader* ScreenShaderHDR;
 Shader* SkyShader;
+Shader* SkyShaderHDR;
+Shader* SkyShaderEquirectangular;
+Shader* EnvDiffIrradianceShader;
+Shader* EnvSpecPrefilterShader;
+Shader* IntegrateBRDFShader;
+
 Shader* DepthShader;
 Shader* DepthCubeShader;
+
+// screen shaders
+Shader* ScreenShader;
+Shader* ScreenShaderHDR;
+
+// deferred shaders
 Shader* GBufferShader;
 Shader* DeferredShader;
 Shader* DeferredPLightShader;
 Shader* DeferredPLNoShadowShader;
 Shader* SSAOShader;
+
+// PBR shaders
+Shader* PBRShader;
 
 
 Shader* GaussianBlurShader;
@@ -88,11 +103,42 @@ void compileShaders() {
     SSAOShader->loadShader("SSAOShader.frag", GL_FRAGMENT_SHADER);
     SSAOShader->link();
 
+    PBRShader = new Shader();
+    PBRShader->loadShader("CompletedShader.vert", GL_VERTEX_SHADER);
+    PBRShader->loadShader("PBRShader.frag", GL_FRAGMENT_SHADER);
+    PBRShader->link();
+
 
     SkyShader = new Shader();
     SkyShader->loadShader("SkyShader.vert", GL_VERTEX_SHADER);
     SkyShader->loadShader("SkyShader.frag", GL_FRAGMENT_SHADER);
     SkyShader->link();
+
+    SkyShaderHDR = new Shader();
+    SkyShaderHDR->loadShader("SkyShader.vert", GL_VERTEX_SHADER);
+    SkyShaderHDR->loadShader("SkyShaderHDR.frag", GL_FRAGMENT_SHADER);
+    SkyShaderHDR->link();
+
+    SkyShaderEquirectangular = new Shader();
+    SkyShaderEquirectangular->loadShader("SkyShader.vert", GL_VERTEX_SHADER);
+    SkyShaderEquirectangular->loadShader("SkyShaderEquirectangular.frag", GL_FRAGMENT_SHADER);
+    SkyShaderEquirectangular->link();
+
+    EnvDiffIrradianceShader = new Shader();
+    EnvDiffIrradianceShader->loadShader("SkyShader.vert", GL_VERTEX_SHADER);
+    EnvDiffIrradianceShader->loadShader("EnvDiffIrradianceShader.frag", GL_FRAGMENT_SHADER);
+    EnvDiffIrradianceShader->link();
+
+    EnvSpecPrefilterShader = new Shader();
+    EnvSpecPrefilterShader->loadShader("SkyShader.vert", GL_VERTEX_SHADER);
+    EnvSpecPrefilterShader->loadShader("EnvPrefilterShader.frag", GL_FRAGMENT_SHADER);
+    EnvSpecPrefilterShader->link();
+
+    IntegrateBRDFShader = new Shader();
+    IntegrateBRDFShader->loadShader("ScreenShader.vert", GL_VERTEX_SHADER);
+    IntegrateBRDFShader->loadShader("IntegrateBRDFShader.frag", GL_FRAGMENT_SHADER);
+    IntegrateBRDFShader->link();
+
 
     DepthShader = new Shader();
     DepthShader->loadShader("DepthShader.vert", GL_VERTEX_SHADER);
@@ -133,9 +179,9 @@ bool Shader::compileShader(const std::string& source, GLObject& shaderObject, GL
 const Shader* selectShader(RenderType type) {
     switch (type) {
         case SOLID:
-            return SolidShader;
         case CUTOUT:
-            return CutoutShader;
+            return SolidShader;
+//            return CutoutShader;
         case TRANSPARENT:
             return TransparentShader;
         case SCREEN:
@@ -145,6 +191,10 @@ const Shader* selectShader(RenderType type) {
         case PURE:
             return SimpleShader;
     }
+}
+
+const Shader* selectPBRShader(RenderType type) {
+    return PBRShader;
 }
 
 const Shader* selectCubeShader(RenderType type) {
@@ -187,6 +237,15 @@ std::string Shader::TextureName(int type, int n) {
             break;
         case aiTextureType_DISPLACEMENT:
             name = "parallax";
+            break;
+        case aiTextureType_DIFFUSE_ROUGHNESS:
+            name = "roughness";
+            break;
+        case aiTextureType_METALNESS:
+            name = "metalness";
+            break;
+        case aiTextureType_AMBIENT_OCCLUSION:
+            name = "ao";
             break;
         default:
             std::cerr << "WARN::TEXTURE::Unsupported texture type:" << type << '\n';
@@ -259,6 +318,11 @@ void Shader::uniformInt(const std::string &name, int iv) const {
     glUniform1iv(loc, 1, &iv);
 }
 
+void Shader::uniformUInt(const std::string& name, GLuint uiv) const {
+    GLLoc loc = glGetUniformLocation(shaderProgram, name.c_str());
+    glUniform1uiv(loc, 1, &uiv);
+}
+
 void Shader::uniformBool(const std::string &name, bool bv) const {
     GLLoc loc = glGetUniformLocation(shaderProgram, name.c_str());
     glUniform1i(loc, bv);
@@ -271,7 +335,26 @@ void Shader::setDefaultTexture(aiTextureType type, GLuint tex, int idx) const {
 }
 
 void Shader::setEnvironmentMap(GLuint envMap) const {
-    glActiveTexture(GL_TEXTURE29);
+    glActiveTexture(GL_TEXTURE0 + ENVIRONMENT_MAP_TEX);
     glBindTexture(GL_TEXTURE_CUBE_MAP, envMap);
-    this->uniformInt(Shader::ENVIRONMENT_MAP, 29);
+    this->uniformInt(Shader::ENVIRONMENT_MAP, ENVIRONMENT_MAP_TEX);
+}
+
+void Shader::setEnvironmentDiffuse(GLuint envDiff) const {
+    glActiveTexture(GL_TEXTURE0 + ENVIRONMENT_DIFFUSE);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, envDiff);
+    this->uniformInt(Shader::ENVIRONMENT_IRR, ENVIRONMENT_DIFFUSE);
+}
+
+void Shader::setEnvironmentPrefiltered(GLuint envPrefiltered) const {
+    glActiveTexture(GL_TEXTURE0 + ENVIRONMENT_PREFILTERED);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, envPrefiltered);
+    this->uniformInt(Shader::ENVIRONMENT_PF, ENVIRONMENT_PREFILTERED);
+}
+
+void Shader::setBRDFLookUpTex(GLuint brdfLUT) const {
+    glActiveTexture(GL_TEXTURE0 + BRDF_LOOK_UP_TEXTURE);
+    glBindTexture(GL_TEXTURE_2D, brdfLUT);
+    this->uniformInt(Shader::BRDF_LUT, BRDF_LOOK_UP_TEXTURE);
+
 }

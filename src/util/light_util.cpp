@@ -33,7 +33,7 @@ void setupPointLight(const Shader* shader, const PointLight& light) {
 
 
 void setupDirectionalLight(const Shader* shader, const DirectionalLight& light) {
-    shader->uniformVec3(Shader::DirectLight::INJECTION, light.injection);
+    shader->uniformVec3(Shader::DirectLight::INJECTION, glm::normalize(light.injection));
     shader->uniformVec3(Shader::DirectLight::COLOR,     light.color);
     shader->uniformVec3(Shader::DirectLight::AMBIENT,   light.ambient);
 

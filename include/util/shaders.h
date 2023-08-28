@@ -8,6 +8,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include "defs.h"
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 #include "glm/glm.hpp"
@@ -51,9 +52,13 @@ public:
     void uniformVec2(const std::string& name, const glm::vec2& vec) const;
     void uniformFloat(const std::string& name, float fv) const;
     void uniformInt(const std::string& name, int iv) const;
+    void uniformUInt(const std::string& name, GLuint uiv) const;
     void uniformBool(const std::string& name, bool bv) const;
     void setDefaultTexture(aiTextureType type, GLuint tex, int idx) const;
     void setEnvironmentMap(GLuint envMap) const;
+    void setEnvironmentDiffuse(GLuint envDiff) const;
+    void setEnvironmentPrefiltered(GLuint envPrefiltered) const;
+    void setBRDFLookUpTex(GLuint brdfLUT) const;
 
     /*===== Uniform names =====*/
 //    static constexpr const char MODEL[]                 = "model";
@@ -107,6 +112,14 @@ public:
     static constexpr const char SSAO_KERNEL_RADIUS[]    = "radius";
     static constexpr const char SSAO_POWER[]            = "power";
     static constexpr const char SCREEN_SIZE[]           = "screenSize";
+    static constexpr const char N_SEGMENTS[]            = "nSegments";
+    static constexpr const char ROUGHNESS[]             = "roughness";
+    static constexpr const char N_SAMPLES[]             = "nSamples";
+
+    static constexpr const char ENVIRONMENT_IRR[]       = "envIrradiance";
+    static constexpr const char ENVIRONMENT_PF[]        = "envPrefiltered";
+    static constexpr const char BRDF_LUT[]              = "brdfLookUpTex";
+
 //    static constexpr const char PROJECTION[] = "proj";
     static constexpr const char CUBE_SPACE_MATRICES[6][21] = {
             "cubeSpaceMatrices[0]",
@@ -122,20 +135,35 @@ public:
 
 
 extern Shader* VoidShader;
+
+// forward shaders
 extern Shader* SolidShader;
 extern Shader* SimpleShader;
 extern Shader* TransparentShader;
 extern Shader* CutoutShader;
-extern Shader* ScreenShader;
-extern Shader* ScreenShaderHDR;
 extern Shader* SkyShader;
+extern Shader* SkyShaderHDR;
+extern Shader* SkyShaderEquirectangular;
+extern Shader* EnvDiffIrradianceShader;
+extern Shader* EnvSpecPrefilterShader;
+extern Shader* IntegrateBRDFShader;
+
 extern Shader* DepthShader;
 extern Shader* DepthCubeShader;
+
+// screen shaders
+extern Shader* ScreenShader;
+extern Shader* ScreenShaderHDR;
+
+// deferred shaders
 extern Shader* GBufferShader;
 extern Shader* DeferredShader;
 extern Shader* DeferredPLightShader;
 extern Shader* DeferredPLNoShadowShader;
 extern Shader* SSAOShader;
+
+// PBR shaders
+extern Shader* PBRShader;
 
 
 extern Shader* GaussianBlurShader;
@@ -143,6 +171,7 @@ extern Shader* GaussianBlurShader;
 
 void compileShaders();
 const Shader* selectShader(RenderType type);
+const Shader* selectPBRShader(RenderType type);
 const Shader* selectCubeShader(RenderType type);
 const Shader* selectGBufferShader(RenderType type);
 

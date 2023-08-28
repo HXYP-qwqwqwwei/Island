@@ -10,7 +10,9 @@
 #include <functional>
 #include "shaders.h"
 #include "light_util.h"
+#include "texture_util.h"
 #include "Model.h"
+#include "SkyBox.h"
 #include "BuiltinMesh.h"
 #include "Screen.h"
 
@@ -44,9 +46,22 @@ private:
     std::unordered_map<std::string, uint> names;
 };
 
-void render(const Model* model, RenderType type, const Camera& camera, const glm::mat4* transMtx, size_t amount, const Light& light);
+void render(const Model* model, RenderType type, const Camera& camera, const glm::mat4* transMtx, size_t amount,
+            const Light& light, const TextureCube& envMap);
 
-void render(const Model* model, RenderType type, const Camera& camera, const glm::mat4& transMtx, const Light& light);
+void renderPBR(const Model* model, RenderType type, const Camera& camera, const glm::mat4* transMtx, size_t amount,
+            const Light& light, const TextureCube& envDiff, const TextureCube& envPrefiltered, const Texture2D& brdfLUT);
+
+
+//void render(const Model* model, RenderType type, const Camera& camera, const glm::mat4& transMtx, const Light& light);
+
+//void renderSkyBox(const SkyBox* skyBox);
+
+template<typename T>
+void renderSkyBox(const T* skyBox, const Shader* shader) {
+    shader->use();
+    skyBox->draw(*shader);
+}
 
 void renderShadow(const Model* model, const glm::mat4* transMtx, size_t amount, const DLight& light, GLsizei level);
 

@@ -7,14 +7,24 @@
 #include "AbstractMesh.hpp"
 #include "texture_util.h"
 
-class SkyBox: public AbstractMesh<VertexCube, TextureCube> {
+class SkyBox: public AbstractMesh<glm::vec3, TextureCube> {
 public:
     SkyBox() = default;
-    SkyBox(const std::vector<VertexCube>& vertices, const std::vector<uint>& indices, const std::vector<TextureCube>& textures);
+    SkyBox(const std::vector<glm::vec3>& vertices, const std::vector<uint>& indices, const std::vector<TextureCube>& textures);
     void draw(const Shader &shader) const override;
 protected:
     void setupVertexAttribs() override;
 };
+
+class SkyBoxEquirectangular: public AbstractMesh<glm::vec3, Texture2D> {
+public:
+    SkyBoxEquirectangular() = default;
+    SkyBoxEquirectangular(const std::vector<glm::vec3>& vertices, const std::vector<uint>& indices, const std::vector<Texture2D>& textures);
+    void draw(const Shader &shader) const override;
+protected:
+    void setupVertexAttribs() override;
+};
+
 
 
 #endif //ISLAND_SKYBOX_H

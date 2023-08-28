@@ -52,7 +52,7 @@ Model shapes::Rectangle(float w, float h, TexList<Texture2DWithType> textures, f
     return Model({rect.build()});
 }
 
-BuiltinMesh* shapes::BallMesh(float radius, int segmentsXZ, int segmentsY) {
+BuiltinMesh* shapes::BallMesh(GLfloat radius, GLsizei segmentsXZ, GLsizei segmentsY, GLfloat maxU, GLfloat maxV) {
     std::vector<glm::vec3> positions;
 
     // vertex positions
@@ -73,12 +73,18 @@ BuiltinMesh* shapes::BallMesh(float radius, int segmentsXZ, int segmentsY) {
     }
 
     BuiltinMesh& ball = *(new BuiltinMesh);
+    const GLfloat dU = maxU / GLfloat(segmentsXZ);
+    const GLfloat dV = maxV / GLfloat(segmentsY);
+
+    auto calUV = [=](GLsizei xz, GLsizei y) -> glm::vec2 {
+        return {GLfloat(xz) * dU, 1.0f - GLfloat(y) * dV};
+    };
 
     // top
     for (int i = 0; i < segmentsXZ; ++i) {
-        ball.addVertex(top)
-            .addVertex(positions[i])
-            .addVertex(positions[(i+1) % segmentsXZ])
+        ball.addVertex(top, calUV(i, 0))
+            .addVertex(positions[i], calUV(i, 1))
+            .addVertex(positions[(i+1) % segmentsXZ], calUV((i+1) % segmentsXZ, 1))
             .nextFace();
     }
 
@@ -88,13 +94,13 @@ BuiltinMesh* shapes::BallMesh(float radius, int segmentsXZ, int segmentsY) {
         for (int j = 0; j < segmentsXZ; ++j) {
             int v1 = first1 + j, v2 = (j+1) % segmentsXZ + first1;
             int w1 = first2 + j, w2 = (j+1) % segmentsXZ + first2;
-            ball.addVertex(positions[v1])   /*  v1   v2 */
-                .addVertex(positions[w1])   /*  |  \    */
-                .addVertex(positions[w2])   /*  w1—— w2 */
+            ball.addVertex(positions[v1], calUV(j, i))      /*  v1   v2 */
+                .addVertex(positions[w1], calUV(j, i+1))    /*  |  \    */
+                .addVertex(positions[w2], calUV(j+1, i+1))  /*  w1—— w2 */
                 .nextFace()
-                .addVertex(positions[v1])   /*  v1 ——v2 */
-                .addVertex(positions[w2])   /*     \  | */
-                .addVertex(positions[v2])   /*  w1   w2 */
+                .addVertex(positions[v1], calUV(j, i))      /*  v1 ——v2 */
+                .addVertex(positions[w2], calUV(j+1, i+1))  /*     \  | */
+                .addVertex(positions[v2], calUV(j+1, i))    /*  w1   w2 */
                 .nextFace();
         }
     }
@@ -102,16 +108,17 @@ BuiltinMesh* shapes::BallMesh(float radius, int segmentsXZ, int segmentsY) {
     // bottom
     int first = (segmentsY-2) * segmentsXZ;
     for (int i = 0; i < segmentsXZ; ++i) {
-        ball.addVertex(positions[first + i])
-            .addVertex(bot)
-            .addVertex(positions[first + (i+1) % segmentsXZ])
+        ball.addVertex(positions[first + i], calUV(i, segmentsXZ - 1))
+            .addVertex(bot, calUV(i, segmentsXZ))
+            .addVertex(positions[first + (i+1) % segmentsXZ], calUV((i+1) % segmentsXZ, segmentsXZ - 1))
             .nextFace();
     }
     return &ball;
 }
 
-Model shapes::Ball(float radius, int segmentsXZ, int segmentsY) {
-    auto mesh = BallMesh(radius, segmentsXZ, segmentsY);
+Model shapes::Ball(GLfloat radius, GLsizei segmentsXZ, GLsizei segmentsY, TexList<Texture2DWithType> textures, GLfloat maxU, GLfloat maxV) {
+    auto mesh = BallMesh(radius, segmentsXZ, segmentsY, maxU, maxV);
+    mesh->setTextures(textures);
     Model ball({mesh->build()});
     delete mesh;
     return ball;
@@ -135,50 +142,57 @@ Screen* shapes::ScreenRect(TexList<Texture2D> tex) {
     return rect;
 }
 
+std::vector<glm::vec3 > SKY_BOX_VERTICES {
+        glm::vec3(  .5f,    .5f,    .5f),
+        glm::vec3(  .5f,   -.5f,    .5f),
+        glm::vec3( -.5f,   -.5f,    .5f),
+        glm::vec3( -.5f,    .5f,    .5f),
+
+        glm::vec3(  .5f,    .5f,   -.5f),
+        glm::vec3( -.5f,    .5f,   -.5f),
+        glm::vec3( -.5f,   -.5f,   -.5f),
+        glm::vec3(  .5f,   -.5f,   -.5f),
+
+        glm::vec3(  .5f,    .5f,    .5f),
+        glm::vec3( -.5f,    .5f,    .5f),
+        glm::vec3( -.5f,    .5f,   -.5f),
+        glm::vec3(  .5f,    .5f,   -.5f),
+
+        glm::vec3(  .5f,   -.5f,    .5f),
+        glm::vec3(  .5f,   -.5f,   -.5f),
+        glm::vec3( -.5f,   -.5f,   -.5f),
+        glm::vec3( -.5f,   -.5f,    .5f),
+
+        glm::vec3(  .5f,    .5f,    .5f),
+        glm::vec3(  .5f,    .5f,   -.5f),
+        glm::vec3(  .5f,   -.5f,   -.5f),
+        glm::vec3(  .5f,   -.5f,    .5f),
+
+        glm::vec3( -.5f,    .5f,    .5f),
+        glm::vec3( -.5f,   -.5f,    .5f),
+        glm::vec3( -.5f,   -.5f,   -.5f),
+        glm::vec3( -.5f,    .5f,   -.5f),
+};
+
+std::vector<uint> SKY_BOX_INDICES {
+        0,  1,  2,  0,  2,  3,
+        4,  5,  6,  4,  6,  7,
+        8,  9,  10, 8,  10, 11,
+        12, 13, 14, 12, 14, 15,
+        16, 17, 18, 16, 18, 19,
+        20, 21, 22, 20, 22, 23
+};
+
+
 SkyBox* shapes::SkyBoxCube(TextureCube texture) {
-    std::vector<VertexCube> vertices {
-            {glm::vec3(  .5f,    .5f,    .5f)},
-            {glm::vec3(  .5f,   -.5f,    .5f)},
-            {glm::vec3( -.5f,   -.5f,    .5f)},
-            {glm::vec3( -.5f,    .5f,    .5f)},
-
-            {glm::vec3(  .5f,    .5f,   -.5f)},
-            {glm::vec3( -.5f,    .5f,   -.5f)},
-            {glm::vec3( -.5f,   -.5f,   -.5f)},
-            {glm::vec3(  .5f,   -.5f,   -.5f)},
-
-            {glm::vec3(  .5f,    .5f,    .5f)},
-            {glm::vec3( -.5f,    .5f,    .5f)},
-            {glm::vec3( -.5f,    .5f,   -.5f)},
-            {glm::vec3(  .5f,    .5f,   -.5f)},
-
-            {glm::vec3(  .5f,   -.5f,    .5f)},
-            {glm::vec3(  .5f,   -.5f,   -.5f)},
-            {glm::vec3( -.5f,   -.5f,   -.5f)},
-            {glm::vec3( -.5f,   -.5f,    .5f)},
-
-            {glm::vec3(  .5f,    .5f,    .5f)},
-            {glm::vec3(  .5f,    .5f,   -.5f)},
-            {glm::vec3(  .5f,   -.5f,   -.5f)},
-            {glm::vec3(  .5f,   -.5f,    .5f)},
-
-            {glm::vec3( -.5f,    .5f,    .5f)},
-            {glm::vec3( -.5f,   -.5f,    .5f)},
-            {glm::vec3( -.5f,   -.5f,   -.5f)},
-            {glm::vec3( -.5f,    .5f,   -.5f)},
-    };
-
-    std::vector<uint> indices {
-            0,  1,  2,  0,  2,  3,
-            4,  5,  6,  4,  6,  7,
-            8,  9,  10, 8,  10, 11,
-            12, 13, 14, 12, 14, 15,
-            16, 17, 18, 16, 18, 19,
-            20, 21, 22, 20, 22, 23
-    };
-
     std::vector<TextureCube> textures = {texture};
-    return new SkyBox(vertices, indices, textures);
+    return new SkyBox(SKY_BOX_VERTICES, SKY_BOX_INDICES, textures);
 }
+
+SkyBoxEquirectangular* shapes::SkyBoxCubeEquirectangular(Texture2D texture) {
+    std::vector<Texture2D> textures = {texture};
+    return new SkyBoxEquirectangular(SKY_BOX_VERTICES, SKY_BOX_INDICES, textures);
+}
+
 
 

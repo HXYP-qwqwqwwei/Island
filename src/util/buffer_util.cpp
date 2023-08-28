@@ -216,61 +216,141 @@ static const GLenum ColorAttachments[8]{
 //    return 0;
 //}
 
-FrameBufferCube::FrameBufferCube(GLsizei length, GLint colorFormat, bool depth): length(length), colorFormat(colorFormat) {
+FrameBufferCube::FrameBufferCube(GLsizei length, GLsizei maxMipmapLevels): length(length), mipmapLevels(maxMipmapLevels), Builder("FrameBufferCube") { }
+
+TextureCube FrameBufferCube::getDepthStencilTex() const {
+    return {this->depthCube, length, length, GL_DEPTH_COMPONENT};
+}
+
+TextureCube FrameBufferCube::getTexture() const {
+    if (this->color.id == 0) {
+        std::cerr << "WARN::FrameBufferCube::getTexture: buffer has no color attachment.\n";
+    }
+    return this->color;
+}
+
+TextureCube FrameBufferCube::extractTexture() {
+    TextureCube extracted = this->color;
+    if (extracted.id == 0) {
+        std::cerr << "WARN::FrameBufferCube::texture: Cube has no color attachment.\n";
+        return extracted;
+    }
+    this->color = createTextureCube(extracted.internalFormat, extracted.length, extracted.warp, extracted.filter, mipmapLevels > 1);
+    return extracted;
+}
+
+
+FrameBufferCube &FrameBufferCube::texture(GLint internalFormat, GLint warp, GLint filter) {
+    if (checkBuilt("texture: Buffer is already built.")) return *this;
+    if (this->color.id != 0) {
+        std::cerr << "WARN::FrameBufferCube::texture: Cube buffer can only create one color attachment.\n";
+        return *this;
+    }
+    this->color = createTextureCube(internalFormat, this->length, warp, filter, mipmapLevels > 1);
+    return *this;
+}
+
+FrameBufferCube &FrameBufferCube::withDepth() {
+    if (checkBuilt("withDepth: buffer is already built.")) return *this;
+    this->depth = true;
+    return *this;
+}
+
+FrameBufferCube &FrameBufferCube::withStencil() {
+    if (checkBuilt("withStencil: buffer is already built.")) return *this;
+    return *this;
+}
+
+FrameBufferCube& FrameBufferCube::useRenderBuffer() {
+    if (checkBuilt("useRenderBuffer: buffer is already built.")) return *this;
+    this->useRBO = true;
+    return *this;
+}
+
+
+void FrameBufferCube::build() {
+    if (checkBuilt("build: Buffer is already built.")) return;
+
     glGenFramebuffers(1, &this->object);
     glBindFramebuffer(GL_FRAMEBUFFER, this->object);
-    if (colorFormat != GL_NONE) {
-        glGenTextures(1, &this->colorCube);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, this->colorCube);
-        for (int i = 0; i < 6; ++i) {
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_SRGB, length, length, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+
+    if (depth) {
+        if (useRBO) {
+            glGenRenderbuffers(1, &this->depthCube);
+            glBindRenderbuffer(GL_RENDERBUFFER, this->depthCube);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, length, length);
+            glBindRenderbuffer(GL_RENDERBUFFER, 0);
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, this->depthCube);
+        } else {
+            glGenTextures(1, &this->depthCube);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, this->depthCube);
+            for (int i = 0; i < 6; ++i) {
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, length, length, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+            }
+            if (mipmapLevels > 1) {
+                glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, mipmap_filter(GL_NEAREST));
+            } else {
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            }
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+            glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, this->depthCube, 0);
         }
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    this->setBuilt();
+}
 
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, this->colorCube, 0);
+void FrameBufferCube::bind(GLsizei mipLevel) const {
+    auto mipLen  = GLsizei(this->length * std::pow(0.5, mipLevel));
+    glViewport(0, 0, mipLen, mipLen);
 
+    glBindFramebuffer(GL_FRAMEBUFFER, this->object);
+    if (this->color.id != 0) {
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, this->color.id, mipLevel);
     } else {
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
     }
 
-    if (depth) {
-        glGenTextures(1, &this->depthCube);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, this->depthCube);
-        for (int i = 0; i < 6; ++i) {
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, length, length, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    if (this->depth) {
+        if (this->useRBO) {
+            glBindRenderbuffer(GL_RENDERBUFFER, this->depthCube);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, mipLen, mipLen);
+        } else {
+            glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, this->depthCube, mipLevel);
         }
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, this->depthCube, 0);
     }
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-TextureCube FrameBufferCube::getDepthCubeMap() const {
-    return {this->depthCube, length, length, GL_DEPTH_COMPONENT};
-}
-
-TextureCube FrameBufferCube::getTextureCubeTex() const {
-    return {this->colorCube, length, length, colorFormat};
-}
-
-void FrameBufferCube::bind() const {
+void FrameBufferCube::bind(GLenum target, GLsizei mipLevel) const {
+    auto mipLen  = GLsizei(this->length * std::pow(0.5, mipLevel));
+    glViewport(0, 0, mipLen, mipLen);
     glBindFramebuffer(GL_FRAMEBUFFER, this->object);
+    if (this->color.id != 0) {
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target, this->color.id, mipLevel);
+    } else {
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+    }
+
+    if (this->depth) {
+        if (this->useRBO) {
+            glBindRenderbuffer(GL_RENDERBUFFER, this->depthCube);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, mipLen, mipLen);
+        } else {
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, target, this->depthCube, mipLevel);
+        }
+    }
 }
 
 
-FrameBuffer::FrameBuffer(GLsizei width, GLsizei height): width(width), height(height) {}
+FrameBuffer::FrameBuffer(GLsizei width, GLsizei height): width(width), height(height), Builder("FrameBuffer") {}
 
 
 FrameBuffer::~FrameBuffer() {
@@ -285,7 +365,8 @@ FrameBuffer::~FrameBuffer() {
 }
 
 
-FrameBuffer& FrameBuffer::texture(GLint internalFormat, int n, GLint warp, GLint filter) {
+FrameBuffer& FrameBuffer::texture(GLint internalFormat, GLsizei n, GLint warp, GLint filter) {
+    if (checkBuilt("texture: Buffer is already built.")) return *this;
     n = MAX(1, n);
     for (int i = 0; i < n; ++i) {
         GLuint tex;
@@ -299,31 +380,31 @@ FrameBuffer& FrameBuffer::texture(GLint internalFormat, int n, GLint warp, GLint
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
         glBindTexture(GL_TEXTURE_2D, 0);
 
-        this->colors.emplace_back(tex, width, height, internalFormat);
+        this->colors.emplace_back(tex, width, height, internalFormat, warp, filter);
     }
     return *this;
 }
 
-FrameBuffer& FrameBuffer::depthBuffer() {
-    if (checkBuilt()) return *this;
+FrameBuffer& FrameBuffer::withDepth() {
+    if (checkBuilt("withDepth: Buffer is already built.")) return *this;
     this->depth = true;
     return *this;
 }
 
-FrameBuffer& FrameBuffer::stencilBuffer() {
-    if (checkBuilt()) return *this;
+FrameBuffer& FrameBuffer::withStencil() {
+    if (checkBuilt("withStencil: Buffer is already built.")) return *this;
     this->stencil = true;
     return *this;
 }
 
 FrameBuffer &FrameBuffer::useRenderBuffer() {
-    if (checkBuilt()) return *this;
+    if (checkBuilt("useRenderBuffer: Buffer is already built.")) return *this;
     this->useRBO = true;
     return *this;
 }
 
 void FrameBuffer::build() {
-    if (checkBuilt()) return;
+    if (checkBuilt("build: Buffer is already built.")) return;
     glGenFramebuffers(1, &this->object);
     glBindFramebuffer(GL_FRAMEBUFFER, this->object);
 
@@ -377,27 +458,19 @@ void FrameBuffer::build() {
 
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        std::cerr << "ERROR::FRAMEBUFFER::Incomplete framebuffer\n";
+        std::cerr << "ERROR::FRAMEBUFFER::Incomplete framebuffer." << std::endl;
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    this->built = true;
-}
-
-bool FrameBuffer::checkBuilt() const {
-    if (this->built) {
-        std::cerr << "WARN::FRAMEBUFFER::FrameBuffer is already built\n";
-    }
-    return this->built;
+    this->setBuilt();
 }
 
 
 Texture2D FrameBuffer::getDepthStencilTex() const {
-    if (!this->built) {
-        std::cerr << "WARN::FRAMEBUFFER::getDepthStencilTex::FrameBuffer has not built\n";
+    if (this->checkNotBuilt("getDepthStencilTex: Buffer has not built.")) {
         return {};
     }
     if (this->useRBO) {
-        std::cerr << "ERROR::FRAMEBUFFER::Cannot read depth/stencil buffer when enabled render buffer\n";
+        std::cerr << "ERROR::FRAMEBUFFER::Cannot read depth/stencil buffer when enabled render buffer" << std::endl;
         return {};
     }
     return {this->depth_stencil, width, height, stencil ? GL_DEPTH24_STENCIL8 : GL_DEPTH_COMPONENT};
@@ -405,17 +478,22 @@ Texture2D FrameBuffer::getDepthStencilTex() const {
 
 
 Texture2D FrameBuffer::getTexture(int i) const {
-    if (!this->built) {
-        std::cerr << "WARN::FRAMEBUFFER::getTexture::FrameBuffer has not built\n";
+    if (this->checkNotBuilt("getTexture: Buffer has not built.")) {
         return {};
     }
     return this->colors[i];
 }
 
+Texture2D FrameBuffer::extractTexture(int i) {
+    Texture2D extracted = this->colors[i];
+    this->colors[i] = createTexture2D(extracted.internalFormat, extracted.width, extracted.height, extracted.warp, extracted.filter);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, this->colors[i].id, 0);
+    return extracted;
+}
+
+
 void FrameBuffer::bind() const {
-    if (!this->built) {
-        std::cerr << "WARN::FRAMEBUFFER::bind::FrameBuffer has not built\n";
-    }
+    this->checkNotBuilt("bind: Buffer has not built");
     glBindFramebuffer(GL_FRAMEBUFFER, this->object);
 }
 

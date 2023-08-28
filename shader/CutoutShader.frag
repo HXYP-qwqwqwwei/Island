@@ -29,11 +29,16 @@ struct PointLight {
     samplerCube depthTex;
 };
 
+#define MAX_CSM_LEVELS 4
+
 struct DirectLight {
     vec3 injection;
     vec3 color;
     vec3 ambient;
-    sampler2D depthTex;
+    sampler2D csmMaps[MAX_CSM_LEVELS];
+    mat4 LiSpaceMatrices[MAX_CSM_LEVELS];
+    float farDepths[MAX_CSM_LEVELS];
+    int csmLevels;
 };
 
 uniform PointLight pointLights[4];
@@ -43,6 +48,7 @@ uniform samplerCube environment;
 uniform Textures texes;
 
 vec2 parallaxFixedUV(sampler2D parallaxTex, vec3 view);
+int chooseCSMLevel(DirectLight light, float depth);
 float pointLightShadow(samplerCube depthTex, vec3 fPos, vec3 lightPos, vec3 norm, float zFar);
 float directLightShadow(sampler2D depthTex, vec4 fPosLSpace, vec3 injction, vec3 norm);
 
@@ -69,7 +75,8 @@ void main() {
 
     // directional light
     vec3 diffuse_dLight = directLight.color * max(0.0f, dot(-dLightInj_tanSpace, texNorm));
-    float dShadow       = directLightShadow(directLight.depthTex, fPosLightSpace, directLight.injection, texNorm);
+    int i = chooseCSMLevel(directLight, gl_FragCoord.z);
+    float dShadow       = directLightShadow(directLight.csmMaps[i], fPosLightSpace, directLight.injection, texNorm);
     diffuse_dLight     *= (1 - dShadow);
     vec3 diffuse        = diffuse_dLight;
 
@@ -143,6 +150,21 @@ vec2 parallaxFixedUV(sampler2D parallaxTex, vec3 view) {
     float d1 = z - depth;
     uv -= dUV * d1 / (d1 + d2);     // 线性插值
     return uv;
+}
+
+int chooseCSMLevel(DirectLight light, float depth) {
+    float zNear = 0.1f;
+    float zFar  = 100.0f;
+    depth = depth * 2.0 - 1.0; // back to NDC
+    depth = (2.0 * zNear * zFar) / (zFar + zNear - depth * (zFar - zNear));
+
+    int n = min(MAX_CSM_LEVELS, light.csmLevels);
+    for (int i = 0; i < n; ++i) {
+        if (depth < light.farDepths[i]) {
+            return i;
+        }
+    }
+    return n - 1;
 }
 
 

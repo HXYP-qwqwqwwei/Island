@@ -9,6 +9,7 @@
 
 typedef unsigned int uint;
 typedef long long Long;
+typedef GLuint GLObject;
 
 #define MAX(a,b) (((a) > (b)) ? (a) : (b))
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))
@@ -18,6 +19,14 @@ typedef long long Long;
 #define DEFAULT_TEXTURE_REFL    29
 #define DEFAULT_TEXTURE_NORM    28
 #define DEFAULT_TEXTURE_PARA    27
+#define DEFAULT_TEXTURE_AO      26
+#define DEFAULT_TEXTURE_METAL   25
+#define DEFAULT_TEXTURE_ROUGH   24
+
+#define ENVIRONMENT_MAP_TEX     15
+#define ENVIRONMENT_DIFFUSE     15
+#define ENVIRONMENT_PREFILTERED 14
+#define BRDF_LOOK_UP_TEXTURE    13
 
 #define POINT_SHADOW_MAP0       16
 #define POINT_SHADOW_MAP1       17

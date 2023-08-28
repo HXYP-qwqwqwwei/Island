@@ -15,10 +15,20 @@ static std::vector<FrameBuffer*> CSMBuffers;
 
 static Buffer* PVMatBuffer;
 static FrameBuffer* BoundFrame;
+static FrameBuffer* BoundFrameCube;
 
 static FrameBuffer* BlurRGBBuffer;
 static FrameBuffer* BlurREDBuffer;
 static Screen* screen;
+
+TextureCube EnvironmentCubeMap;
+TextureCube EnvironmentDiffuseMap;
+TextureCube EnvironmentPrefilteredMap;
+Texture2D BRDFLookUpTex;
+
+SkyBox* SkyBoxModel;
+SkyBoxEquirectangular* SkyBoxEquirectangularModel;
+
 ModelManager MODEL_MANAGER;
 
 
@@ -29,6 +39,7 @@ void PutCSMFrustums(Camera &camera, std::vector<CascadedShadowMap> &shadows);
 void InitWorld() {
     glEnable(GL_STENCIL_TEST);
     glEnable(GL_CULL_FACE);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
     BlurRGBBuffer = &((new FrameBuffer(GameScrWidth, GameScrHeight))->texture(GL_RGB16F));
     BlurRGBBuffer->build();
@@ -41,6 +52,14 @@ void InitWorld() {
     PVMatBuffer->putData(SZ_MAT4F * 2, nullptr, GL_STATIC_DRAW);
     PVMatBuffer->bindBufferBase(0);
     screen = shapes::ScreenRect();
+
+    EnvironmentCubeMap = textures::EMPTY_ENV_MAP;
+    SkyBoxModel = shapes::SkyBoxCube();
+    SkyBoxEquirectangularModel = shapes::SkyBoxCubeEquirectangular();
+
+    EnvironmentDiffuseMap = textures::EMPTY_ENV_MAP;
+    EnvironmentPrefilteredMap = textures::EMPTY_ENV_MAP;
+    BRDFLookUpTex = textures::BLACK_RGB;
 }
 
 
@@ -55,10 +74,9 @@ void Flush() {
 
 void BindFrameBuffer(FrameBuffer* frame) {
     if (frame == nullptr) {
-        if (BoundFrame != nullptr) {
-            BoundFrame->unbind();
-            BoundFrame = nullptr;
-        }
+        BoundFrame = nullptr;
+        glViewport(0, 0, GameScrWidth, GameScrHeight);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return;
     }
     GLsizei width = frame->width;
@@ -66,6 +84,10 @@ void BindFrameBuffer(FrameBuffer* frame) {
     glViewport(0, 0, width, height);
     frame->bind();
     BoundFrame = frame;
+}
+
+void BindFrameBuffer(FrameBufferCube* frame, GLenum target, GLsizei mip) {
+    frame->bind(target, mip);
 }
 
 void ClearBuffer(int bits) {
@@ -97,11 +119,34 @@ void RenderModelsInWorld(Camera &camera, RenderType type) {
         }
     } else {
         for (auto* info: models) {
-            render(MODEL_MANAGER[info->id], type, camera, &info->transMatrices[0], info->transMatrices.size(), light);
+            render(MODEL_MANAGER[info->id], type, camera, &info->transMatrices[0], info->transMatrices.size(), light, EnvironmentCubeMap);
         }
     }
 
     UnbindAllTextures();
+}
+
+void RenderPBRModelsInWorld(Camera& camera, RenderType type) {
+    Light light(DirectLight, PointLights);
+
+    const std::vector<const ModelInfo*>& models = Models[type];
+    if (type == PURE) {
+        ModelInfo lightCubes = MODEL_MANAGER.createInfo("light_cube");
+        if (!PointLights.empty()) {
+            renderLightModels(MODEL_MANAGER[lightCubes.id], &PointLights[0], PointLights.size());
+        }
+        if (!PointLightsNoShadow.empty()) {
+            renderLightModels(MODEL_MANAGER[lightCubes.id], &PointLightsNoShadow[0], PointLightsNoShadow.size());
+        }
+    } else {
+        for (auto* info: models) {
+            renderPBR(MODEL_MANAGER[info->id], type, camera, &info->transMatrices[0], info->transMatrices.size(),
+                      light, EnvironmentDiffuseMap, EnvironmentPrefilteredMap, BRDFLookUpTex);
+        }
+    }
+
+    UnbindAllTextures();
+
 }
 
 void RenderWorldGBuffer(Camera& camera, RenderType type) {
@@ -131,12 +176,17 @@ void SetupPVMatrix(Camera &camera) {
     const glm::mat4 view = camera.getView();
     const glm::mat4 proj = glm::perspective(glm::radians(45.0f), aspect, camera.near(), camera.far());
 
+    SetupPVMatrix(proj, view);
+}
+
+void SetupPVMatrix(glm::mat4 proj, glm::mat4 view) {
     // uniform buffer -- projection and view matrix
     // set view and projection
     PVMatBuffer->bind();
     PVMatBuffer->subData(0, SZ_MAT4F, glm::value_ptr(view));
     PVMatBuffer->subData(SZ_MAT4F, SZ_MAT4F, glm::value_ptr(proj));
     PVMatBuffer->unbind();
+
 }
 
 void EnableDepthTest(GLenum func) {
@@ -148,64 +198,150 @@ void DisableDepthTest() {
     glDisable(GL_DEPTH_TEST);
 }
 
+void SetupEnvironmentMap(const TextureCube* envMap) {
+    if (envMap == nullptr) {
+        EnvironmentCubeMap = textures::EMPTY_ENV_MAP;
+    }
+    EnvironmentCubeMap = *envMap;
+}
 
+void SetupPBREnvironmentMap(const TextureCube* envDiff, const TextureCube* envPrefiltered, const Texture2D* brdfLUT) {
+    if (envDiff == nullptr) {
+        EnvironmentDiffuseMap = textures::EMPTY_ENV_MAP;
+    } else EnvironmentDiffuseMap = *envDiff;
 
-void RenderWorld(Camera& camera, FrameBuffer& frame) {
+    if (envPrefiltered == nullptr) {
+        EnvironmentPrefilteredMap = textures::EMPTY_ENV_MAP;
+    } else EnvironmentPrefilteredMap = *envPrefiltered;
 
-    GLsizei width = frame.width;
-    GLsizei height = frame.height;
-    glViewport(0, 0, width, height);
-    frame.bind();
+    if (brdfLUT == nullptr) {
+        BRDFLookUpTex = textures::BLACK_RGB;
+    } else BRDFLookUpTex = *brdfLUT;
 
-    glClearColor(DirectLight.ambient.r, DirectLight.ambient.g, DirectLight.ambient.b, 1.0F);
+}
 
-    // Depth test
-    glDepthFunc(GL_LESS);   // Default
-    // Stencil test
-    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);  // when a fragment passed ST, replace its value
-    // Blend
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    // 清除(上一帧的)颜色/深度测试/模板测试缓冲
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-    glEnable(GL_DEPTH_TEST);
+void RenderSkyBoxCube(const TextureCube& skyBoxTex, bool hdr, GLfloat lod) {
+    SkyBoxModel->setTextures({skyBoxTex});
     glDepthFunc(GL_LEQUAL);
-
-
-    const glm::mat4 view = camera.getView();
-    const glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
-
-    // uniform buffer -- projection and view matrix
-    PVMatBuffer->bind();
-    // set view and projection
-    PVMatBuffer->subData(0, SZ_MAT4F, glm::value_ptr(view));
-    PVMatBuffer->subData(SZ_MAT4F, SZ_MAT4F, glm::value_ptr(proj));
-
-    // Light Cubes
-    ModelInfo lightCubes = MODEL_MANAGER.createInfo("light_cube");
-    glm::mat4 E(1.0f);
-    for (auto p: PointLights) {
-        glm::mat4 trans = glm::translate(E, p->pos);
-        renderLightModels(MODEL_MANAGER[lightCubes.id], &p, 1);
-    }
-
-    // Normal Models
-    const std::vector<const ModelInfo*>* models;
-    static const std::vector<RenderType> types{SOLID, CUTOUT, TRANSPARENT};
-
-    Light light(DirectLight, PointLights);
-    for (RenderType type: types) {
-        models = &Models[type];
-        for (auto* info: *models) {
-            render(MODEL_MANAGER[info->id], type, camera, &info->transMatrices[0], info->transMatrices.size(), light);
-        }
-    }
-
-    PVMatBuffer->unbind();
-    frame.unbind();
+    glDepthMask(GL_FALSE);
+    const Shader* shader = hdr ? SkyShaderHDR : SkyShader;
+    shader->use();
+    shader->uniformFloat("lod", lod);
+    renderSkyBox(SkyBoxModel, hdr ? SkyShaderHDR : SkyShader);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
     UnbindAllTextures();
 }
+
+void RenderSkyBoxEquirectangular(const Texture2D& equirectangularTex) {
+    SkyBoxEquirectangularModel->setTextures({equirectangularTex});
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    renderSkyBox(SkyBoxEquirectangularModel, SkyShaderEquirectangular);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+    UnbindAllTextures();
+}
+
+void GenDiffuseIrradianceMap(const TextureCube& envMap, GLsizei nSegments) {
+    SkyBoxModel->setTextures({envMap});
+
+    const Shader* shader = EnvDiffIrradianceShader;
+    shader->use();
+    shader->uniformInt(Shader::N_SEGMENTS, nSegments);
+
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    renderSkyBox(SkyBoxModel, shader);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+
+    UnbindAllTextures();
+}
+
+void GenPrefilteredMap(const TextureCube& envMap, GLsizei nSamples, GLfloat roughness) {
+    SkyBoxModel->setTextures({envMap});
+
+    const Shader* shader = EnvSpecPrefilterShader;
+    shader->use();
+    shader->uniformFloat(Shader::ROUGHNESS, roughness);
+    shader->uniformUInt(Shader::N_SAMPLES, nSamples);
+
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    renderSkyBox(SkyBoxModel, shader);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+
+    UnbindAllTextures();
+}
+
+void GenIntegratedBRDF(GLsizei nSamples) {
+    const Shader* shader = IntegrateBRDFShader;
+    shader->use();
+    shader->uniformUInt(Shader::N_SAMPLES, nSamples);
+    screen->draw(*shader);
+
+    UnbindAllTextures();
+}
+
+
+//void RenderWorld(Camera& camera, FrameBuffer& frame) {
+//
+//    GLsizei width = frame.width;
+//    GLsizei height = frame.height;
+//    glViewport(0, 0, width, height);
+//    frame.bind();
+//
+//    glClearColor(DirectLight.ambient.r, DirectLight.ambient.g, DirectLight.ambient.b, 1.0F);
+//
+//    // Depth test
+//    glDepthFunc(GL_LESS);   // Default
+//    // Stencil test
+//    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);  // when a fragment passed ST, replace its value
+//    // Blend
+//    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//
+//    // 清除(上一帧的)颜色/深度测试/模板测试缓冲
+//    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+//
+//    glEnable(GL_DEPTH_TEST);
+//    glDepthFunc(GL_LEQUAL);
+//
+//
+//    const glm::mat4 view = camera.getView();
+//    const glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
+//
+//    // uniform buffer -- projection and view matrix
+//    PVMatBuffer->bind();
+//    // set view and projection
+//    PVMatBuffer->subData(0, SZ_MAT4F, glm::value_ptr(view));
+//    PVMatBuffer->subData(SZ_MAT4F, SZ_MAT4F, glm::value_ptr(proj));
+//
+//    // Light Cubes
+//    ModelInfo lightCubes = MODEL_MANAGER.createInfo("light_cube");
+//    glm::mat4 E(1.0f);
+//    for (auto p: PointLights) {
+//        glm::mat4 trans = glm::translate(E, p->pos);
+//        renderLightModels(MODEL_MANAGER[lightCubes.id], &p, 1);
+//    }
+//
+//    // Normal Models
+//    const std::vector<const ModelInfo*>* models;
+//    static const std::vector<RenderType> types{SOLID, CUTOUT, TRANSPARENT};
+//
+//    Light light(DirectLight, PointLights);
+//    for (RenderType type: types) {
+//        models = &Models[type];
+//        for (auto* info: *models) {
+//            render(MODEL_MANAGER[info->id], type, camera, &info->transMatrices[0], info->transMatrices.size(), light);
+//        }
+//    }
+//
+//    PVMatBuffer->unbind();
+//    frame.unbind();
+//    UnbindAllTextures();
+//}
 
 
 //void RenderWorldGBuffer(Camera& camera, FrameBuffer& gBuffer) {
@@ -320,13 +456,13 @@ void PutCSMFrustums(Camera &camera, std::vector<CascadedShadowMap> &csmShadows) 
     // 视锥体分块
     GLfloat near = camera.near();
     GLfloat far = camera.far();
-    GLfloat fragFN = far / near;
+    GLfloat fracFN = far / near;
     GLfloat lambda = 0.6;
     GLfloat ni = near;
     GLfloat fi;
     for (GLsizei i = 1; i <= nSeg; ++i) {
         GLfloat si = GLfloat(i)/GLfloat(nSeg);
-        fi = lambda * near * pow(fragFN, si) + (1-lambda) * (near + (far-near) * si);
+        fi = lambda * near * pow(fracFN, si) + (1 - lambda) * (near + (far - near) * si);
         viewFrustums.emplace_back(ni, fi * 1.05f);
         ni = fi;
     }
@@ -431,8 +567,9 @@ void UnbindAllTextures() {
 
 uint CreatePointLight(glm::vec3 pos, glm::vec3 color, GLsizei shadowRes, glm::vec3 attenu, glm::vec2 zNearFar) {
     uint id = PointLights.size();
-    auto* shadowBuffer = new FrameBufferCube(shadowRes, GL_NONE, true);
-    auto* p = new PointLight{color, pos, attenu, zNearFar, shadowBuffer->getDepthCubeMap()};
+    auto* shadowBuffer = new FrameBufferCube(shadowRes);
+    shadowBuffer->withDepth().build();
+    auto* p = new PointLight{color, pos, attenu, zNearFar, shadowBuffer->getDepthStencilTex()};
 
     PointShadowBuffers.push_back(shadowBuffer);
     PointLights.push_back(p);
@@ -462,7 +599,7 @@ void SetDirectLight(glm::vec3 injection, glm::vec3 color, GLsizei shadowRes, GLs
 
     for (GLsizei i = 0; i < csmLevels; ++i) {
         auto* shadowBuffer = new FrameBuffer(shadowRes, shadowRes);
-        shadowBuffer->depthBuffer().build();
+        shadowBuffer->withDepth().build();
         DirectLight.shadowMaps.emplace_back(shadowBuffer->getDepthStencilTex());
         CSMBuffers.push_back(shadowBuffer);
     }
